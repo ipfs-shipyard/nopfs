@@ -1,4 +1,5 @@
 plugin/nopfs.so
+cmd/nopfs/nopfs
 
 # Binaries for programs and plugins
 *.exe
