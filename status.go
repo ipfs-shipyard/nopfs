@@ -17,6 +17,20 @@ const (
 // not found in a Denylist.
 type Status int
 
+func (st Status) String() string {
+	switch st {
+	case StatusNotFound:
+		return "not found"
+	case StatusBlocked:
+		return "blocked"
+	case StatusAllowed:
+		return "allowed"
+	case StatusErrored:
+		return "errored"
+	}
+	return "unknown"
+}
+
 // StatusResponse provides full information for a content-block lookup,
 // including the Filename and the Entry, when an associated rule is found.
 type StatusResponse struct {

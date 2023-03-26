@@ -21,13 +21,20 @@ func NewBlocker(files []string) (*Blocker, error) {
 		Denylists: make(map[string]*Denylist),
 	}
 
+	var errors error
 	for _, fname := range files {
 		dl, err := NewDenylist(fname, true)
 		if err != nil {
+			errors = multierr.Append(errors, err)
 			logger.Errorf("error opening and processing %s: %s", fname, err)
+
 			continue
 		}
 		blocker.Denylists[fname] = dl
+	}
+
+	if n := len(multierr.Errors(errors)); n > 0 && n == len(files) {
+		return nil, errors
 	}
 	return &blocker, nil
 }

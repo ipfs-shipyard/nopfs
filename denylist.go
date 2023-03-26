@@ -233,6 +233,10 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 		}
 	}
 
+	// Is this the right way of tailing a file? Pretty sure there are a
+	// bunch of gotchas. It seems to work when saving on top of a file
+	// though. Also, important that the limitedReader is there to avoid
+	// parsing a huge lines.
 	go func() {
 		line := ""
 		limRdr.N = 2 << 20 // reset
@@ -299,7 +303,7 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 //     better but well (decide before going with permanent storage!).
 func (dl *Denylist) parseLine(line string, number uint64) error {
 	line = strings.TrimSuffix(line, "\n")
-	if len(line) == 0 {
+	if len(line) == 0 || line[0] == '#' {
 		return nil
 	}
 
@@ -592,9 +596,9 @@ func (dl *Denylist) IsPathBlocked(p path.Path) StatusResponse {
 		// for denylists not using it.
 		v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
 		v1b32path := v1b32
-		if subPath != "" {
-			v1b32path += "/" + subPath
-		}
+		// badbits appends / on empty subpath. and hashes that
+		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
+		v1b32path += "/" + subPath
 		doubleLegacy, err := multihash.Sum([]byte(v1b32path), codec, -1)
 		if err != nil {
 			logger.Error(err)
@@ -672,8 +676,8 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
 	if sha256blocks != nil {
 		prefix := c.Prefix()
-		// FIXME: is badbits using the mulithash implicit codec for the cidv1?
-		b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String()
+		b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() + "/" // yes, needed
+		logger.Debug("IsCidBlocked cidv1b32 ", b32)
 		double, err := multihash.Sum([]byte(b32), multihash.SHA2_256, -1)
 		if err != nil {
 			logger.Error(err)
