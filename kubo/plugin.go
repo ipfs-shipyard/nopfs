@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/hsanjuan/nopfs"
-	logging "github.com/ipfs/go-log"
+	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/node"
 	"github.com/ipfs/kubo/plugin"
@@ -33,20 +33,31 @@ func (p *nopfsPlugin) Init(env *plugin.Environment) error {
 	return nil
 }
 
+func MakeBlocker() (*nopfs.Blocker, error) {
+	files, err := nopfs.GetDenylistFiles()
+	if err != nil {
+		return nil, err
+	}
+
+	return nopfs.NewBlocker(files)
+}
+
 // PathResolvers returns wrapped PathResolvers for Kubo.
-func PathResolvers(fetchers node.FetchersIn) node.PathResolversOut {
+func PathResolvers(fetchers node.FetchersIn, blocker *nopfs.Blocker) node.PathResolversOut {
 	res := node.PathResolverConfig(fetchers)
 	return node.PathResolversOut{
-		IPLDPathResolver:   nopfs.WrapResolver(res.IPLDPathResolver),
-		UnixFSPathResolver: nopfs.WrapResolver(res.UnixFSPathResolver),
+		IPLDPathResolver:   nopfs.WrapResolver(res.IPLDPathResolver, blocker),
+		UnixFSPathResolver: nopfs.WrapResolver(res.UnixFSPathResolver, blocker),
 	}
 }
 
 func (p *nopfsPlugin) Options(info core.FXNodeInfo) ([]fx.Option, error) {
+	logging.SetLogLevel("nopfs", "DEBUG")
 	logger.Info("Loading Nopfs plugin: content blocking")
 
 	opts := append(
 		info.FXOptions,
+		fx.Provide(MakeBlocker),
 		fx.Decorate(nopfs.WrapBlockService),
 		fx.Decorate(nopfs.WrapNameSystem),
 		fx.Decorate(PathResolvers),

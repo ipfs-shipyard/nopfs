@@ -2,8 +2,6 @@ package nopfs
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-path"
@@ -15,27 +13,40 @@ var _ resolver.Resolver = (*Resolver)(nil)
 
 // Resolver implements a blocking path.Resolver.
 type Resolver struct {
+	blocker  *Blocker
 	resolver resolver.Resolver
 }
 
-func WrapResolver(res resolver.Resolver) resolver.Resolver {
-	fmt.Println("MY PATH RESOLVER!!")
+// WrapResolver wraps the given path Resolver with a content-blocking layer
+// for Resolve operations.
+func WrapResolver(res resolver.Resolver, blocker *Blocker) resolver.Resolver {
+	logger.Info("Path resolved wrapped with content blocker")
 	return &Resolver{
+		blocker:  blocker,
 		resolver: res,
 	}
 }
 
+// ResolveToLastNode checks if the given path is blocked before resolving.
 func (res *Resolver) ResolveToLastNode(ctx context.Context, fpath path.Path) (cid.Cid, []string, error) {
-	fmt.Println("RESOLVE PATH TO LAST NODE")
-	return cid.Undef, nil, errors.New("resolve path blocked")
+	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
+		return cid.Undef, nil, err
+	}
+	return res.resolver.ResolveToLastNode(ctx, fpath)
 }
 
+// ResolvePath checks if the given path is blocked before resolving.
 func (res *Resolver) ResolvePath(ctx context.Context, fpath path.Path) (ipld.Node, ipld.Link, error) {
-	fmt.Println("RESOLVE PATH")
-	return nil, nil, errors.New("resolve path blocked")
+	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
+		return nil, nil, err
+	}
+	return res.resolver.ResolvePath(ctx, fpath)
 }
 
+// ResolvePathComponents checks if the given path is blocked before resolving.
 func (res *Resolver) ResolvePathComponents(ctx context.Context, fpath path.Path) ([]ipld.Node, error) {
-	fmt.Println("RESOLVE PATH COMPONENTS")
-	return nil, errors.New("resolve path blocked")
+	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
+		return nil, err
+	}
+	return res.resolver.ResolvePathComponents(ctx, fpath)
 }

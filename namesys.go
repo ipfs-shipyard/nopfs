@@ -2,8 +2,6 @@ package nopfs
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/ipfs/go-namesys"
 	"github.com/ipfs/go-path"
@@ -15,35 +13,45 @@ var _ namesys.NameSystem = (*NameSystem)(nil)
 
 // NameSystem implements a blocking namesys.NameSystem implementation.
 type NameSystem struct {
-	ns namesys.NameSystem
+	blocker *Blocker
+	ns      namesys.NameSystem
 }
 
-func WrapNameSystem(ns namesys.NameSystem) namesys.NameSystem {
-	fmt.Println("MY NAMESYS RESOLVER!!")
+// WrapNameSystem wraps the given NameSystem with a content-blocking layer
+// for Resolve operations.
+func WrapNameSystem(ns namesys.NameSystem, blocker *Blocker) namesys.NameSystem {
+	logger.Info("NameSystem wrapped with content blocker")
 	return &NameSystem{
-		ns: ns,
+		blocker: blocker,
+		ns:      ns,
 	}
 }
 
+// Resolve resolves an IPNS name unless it is blocked.
 func (ns *NameSystem) Resolve(ctx context.Context, name string, options ...opts.ResolveOpt) (path.Path, error) {
-	fmt.Println("RESOLVE!", name)
-	//ipnsName = strings.TrimPrefix(name, "/ipns/")
-	return "", errors.New("resolve is blocked")
-	// is blocked name?
-	//return res.resolver.Resolve(ctx, name, options)
-}
-
-func (ns *NameSystem) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan namesys.Result {
-	fmt.Println("RESOLVE ASYNC!", name)
-	ch := make(chan namesys.Result, 1)
-	ch <- namesys.Result{
-		Path: "",
-		Err:  errors.New("resolved is blocked"),
+	if err := ns.blocker.IsPathBlocked(path.FromString(name)).ToError(); err != nil {
+		return "", err
 	}
-	return ch
-
+	return ns.ns.Resolve(ctx, name, options...)
 }
 
+// ResolveAsync resolves an IPNS name asynchronously unless it is blocked.
+func (ns *NameSystem) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan namesys.Result {
+	status := ns.blocker.IsPathBlocked(path.FromString(name))
+	if err := status.ToError(); err != nil {
+		ch := make(chan namesys.Result, 1)
+		ch <- namesys.Result{
+			Path: status.Path,
+			Err:  err,
+		}
+		close(ch)
+		return ch
+	}
+
+	return ns.ns.ResolveAsync(ctx, name, options...)
+}
+
+// Publish publishes an IPNS record.
 func (ns *NameSystem) Publish(ctx context.Context, name crypto.PrivKey, value path.Path, options ...opts.PublishOption) error {
 	return ns.ns.Publish(ctx, name, value, options...)
 }

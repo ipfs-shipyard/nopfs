@@ -1,7 +1,7 @@
 plugin:
-	$(MAKE) -C plugin all
+	$(MAKE) -C kubo all
 
 install-plugin:
-	$(MAKE) -C plugin install
+	$(MAKE) -C kubo install
 
 .PHONY: plugin install-plugin

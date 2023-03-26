@@ -2,8 +2,6 @@ package nopfs
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
@@ -16,49 +14,80 @@ var _ blockservice.BlockService = (*BlockService)(nil)
 
 // BlockService implements a blocking BlockService.
 type BlockService struct {
-	bs blockservice.BlockService
+	blocker *Blocker
+	bs      blockservice.BlockService
 }
 
-func WrapBlockService(bs blockservice.BlockService) blockservice.BlockService {
-	fmt.Println("MY BLOCKSERVICE!!")
+// WrapBlockService wraps the given BlockService with a content-blocking layer
+// for Get and Add operations.
+func WrapBlockService(bs blockservice.BlockService, blocker *Blocker) blockservice.BlockService {
+	logger.Info("BlockService wrapped with content blocker")
+
 	return &BlockService{
-		bs: bs,
+		blocker: blocker,
+		bs:      bs,
 	}
 }
 
+// Closes the BlockService and the Blocker.
 func (nbs *BlockService) Close() error {
+	nbs.blocker.Close()
 	return nbs.bs.Close()
 }
 
+// Gets a block unless CID has been blocked.
 func (nbs *BlockService) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
-	fmt.Println("myblock!!")
+	if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
+		return nil, err
+	}
 	return nbs.bs.GetBlock(ctx, c)
-	//return nil, errors.New("getblock blocked")
 }
 
+// GetsBlocks reads several blocks. Blocked CIDs are filtered out of ks.
 func (nbs *BlockService) GetBlocks(ctx context.Context, ks []cid.Cid) <-chan blocks.Block {
-	fmt.Println("myblocks!!")
-	ch := make(chan blocks.Block)
-	close(ch)
-	return ch
+	var filtered []cid.Cid
+	for _, c := range ks {
+		if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
+			logger.Warnf("GetBlocks dropped blocked block: %s", err)
+		} else {
+			filtered = append(filtered, c)
+		}
+	}
+	return nbs.bs.GetBlocks(ctx, filtered)
 }
 
+// Blockstore returns the underlying Blockstore.
 func (nbs *BlockService) Blockstore() blockstore.Blockstore {
 	return nbs.bs.Blockstore()
 }
 
+// Exchange returns the underlying Exchange.
 func (nbs *BlockService) Exchange() exchange.Interface {
 	return nbs.bs.Exchange()
 }
 
+// AddBlock adds a block unless the CID is blocked.
 func (nbs *BlockService) AddBlock(ctx context.Context, o blocks.Block) error {
-	return errors.New("add block blocked")
+	if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
+		return err
+	}
+	return nbs.bs.AddBlock(ctx, o)
 }
 
+// AddBlocks adds multiple blocks. Blocks with blocked CIDs are dropped.
 func (nbs *BlockService) AddBlocks(ctx context.Context, bs []blocks.Block) error {
-	return errors.New("add blocks blocked")
+	var filtered []blocks.Block
+	for _, o := range bs {
+		if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
+			logger.Warnf("AddBlocks dropped blocked block: %s", err)
+		} else {
+			filtered = append(filtered, o)
+		}
+	}
+	return nbs.bs.AddBlocks(ctx, filtered)
 }
 
+// DeleteBlock deletes a block.
 func (nbs *BlockService) DeleteBlock(ctx context.Context, o cid.Cid) error {
 	return nbs.bs.DeleteBlock(ctx, o)
 }
