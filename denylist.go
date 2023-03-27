@@ -90,6 +90,7 @@ type Denylist struct {
 	IPNSBlocksDB       *BlocksDB
 	DoubleHashBlocksDB map[uint64]*BlocksDB // codec -> blocks using that codec
 	PathBlocksDB       *BlocksDB
+	PathPrefixBlocks   Entries
 	// MimeBlocksDB
 
 	f       *os.File
@@ -236,7 +237,8 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 	// Is this the right way of tailing a file? Pretty sure there are a
 	// bunch of gotchas. It seems to work when saving on top of a file
 	// though. Also, important that the limitedReader is there to avoid
-	// parsing a huge lines.
+	// parsing a huge lines.  Also, this could be done by just having
+	// watchers on the folder, but requires a small refactoring.
 	go func() {
 		line := ""
 		limRdr.N = 2 << 20 // reset
@@ -426,7 +428,7 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 	default:
 		// Blocked by path only. We store non-prefix paths directly.
 		// We store prefixed paths separately as every path request
-		// will have to loop them.  FIXME: prefixes
+		// will have to loop them.
 		blockedPath, err := NewBlockedPath(rule)
 		if err != nil {
 			return err
@@ -434,7 +436,11 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 		e.Path = blockedPath
 
 		key := rule
-		dl.PathBlocksDB.Store(key, e)
+		if blockedPath.Prefix {
+			dl.PathPrefixBlocks = append(dl.PathPrefixBlocks, e)
+		} else {
+			dl.PathBlocksDB.Store(key, e)
+		}
 		logger.Debugf("%s:%d: Path rule. Key: %s. Entry: %s", filepath.Base(dl.Filename), number, key, e)
 	}
 
@@ -456,6 +462,214 @@ func (dl *Denylist) Close() error {
 	return err
 }
 
+// IsSubpathBlocked returns Blocking Status for the given subpath.
+func (dl *Denylist) IsSubpathBlocked(subpath string) StatusResponse {
+	subpath = strings.TrimPrefix(subpath, "/")
+
+	logger.Debugf("IsSubpathBlocked load path: %s", subpath)
+	pathBlockEntries, _ := dl.PathBlocksDB.Load(subpath)
+	status, entry := pathBlockEntries.CheckPathStatus(subpath)
+	if status != StatusNotFound { // hit
+		return StatusResponse{
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+		}
+	}
+	// Check every prefix path.
+	status, entry = dl.PathPrefixBlocks.CheckPathStatus(subpath)
+	return StatusResponse{
+		Status:   status,
+		Filename: dl.Filename,
+		Entry:    entry,
+	}
+}
+
+// IsIPNSPathBlocked returns Blocking Status for a given IPNS name and its
+// subpath. The name is NOT an "/ipns/name" path, but just the name.
+func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
+	subpath = strings.TrimPrefix(subpath, "/")
+
+	p := path.FromString("/ipns/" + name + "/" + subpath)
+	key := name
+	// Check if it is a CID and use the multihash as key then
+	c, err := cid.Decode(key)
+	if err == nil {
+		key = c.Hash().B58String()
+	}
+	logger.Debugf("IsIPNSPathBlocked load: %s %s", key, subpath)
+	entries, _ := dl.IPNSBlocksDB.Load(key)
+	status, entry := entries.CheckPathStatus(subpath)
+	if status != StatusNotFound { // hit!
+		return StatusResponse{
+			Path:     p,
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+		}
+	}
+
+	// Double-hash blocking
+	for codec, blocks := range dl.DoubleHashBlocksDB {
+		double, err := multihash.Sum([]byte(p), codec, -1)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		b58 := double.B58String()
+		logger.Debugf("IsPathBlocked load IPNS doublehash: %s", b58)
+		entries, _ := blocks.Load(b58)
+		status, entry := entries.CheckPathStatus("")
+		if status != StatusNotFound { // Hit!
+			return StatusResponse{
+				Path:     p,
+				Status:   status,
+				Filename: dl.Filename,
+				Entry:    entry,
+			}
+		}
+	}
+
+	// Not found
+	return StatusResponse{
+		Path:     p,
+		Status:   StatusNotFound,
+		Filename: dl.Filename,
+	}
+}
+
+// IsIPFSPathBlocked returns Blocking Status for a given IPFS CID and its
+// subpath. The cidStr is NOT an "/ipns/cid" path, but just the cid.
+func (dl *Denylist) IsIPFSPathBlocked(cidStr, subpath string) StatusResponse {
+	return dl.isIPFSIPLDPathBlocked(cidStr, subpath, "ipfs")
+}
+
+// IsIPLDPathBlocked returns Blocking Status for a given IPLD CID and its
+// subpath. The cidStr is NOT an "/ipld/cid" path, but just the cid.
+func (dl *Denylist) IsIPLDPathBlocked(cidStr, subpath string) StatusResponse {
+	return dl.isIPFSIPLDPathBlocked(cidStr, subpath, "ipld")
+}
+
+func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) StatusResponse {
+	subpath = strings.TrimPrefix(subpath, "/")
+
+	p := path.FromString("/" + protocol + "/" + cidStr + "/" + subpath)
+	key := cidStr
+
+	// This could be a shortcut to let the work to the
+	// blockservice.  Assuming IsCidBlocked() is going to be
+	// called later down the stack (by IPFS).
+	//
+	// TODO: enable this with options.
+	// if p.IsJustAKey() {
+	// 	return false
+	// }
+
+	var c cid.Cid
+	var err error
+	if len(key) != 46 || key[:2] != "Qm" {
+		// Key is not a CIDv0, we need to convert other CIDs.
+		// convert to Multihash (cidV0)
+		c, err = cid.Decode(key)
+		if err != nil {
+			logger.Warnf("could not decode %s as CID: %s", key, err)
+			return StatusResponse{
+				Path:     p,
+				Status:   StatusErrored,
+				Filename: dl.Filename,
+				Error:    err,
+			}
+		}
+		key = c.Hash().B58String()
+	}
+
+	logger.Debugf("isIPFSIPLDPathBlocked load: %s %s", key, subpath)
+	entries, _ := dl.IPFSBlocksDB.Load(key)
+	status, entry := entries.CheckPathStatus(subpath)
+	if status != StatusNotFound { // hit!
+		return StatusResponse{
+			Path:     p,
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+		}
+	}
+
+	// Check for double-hashed entries. We need to lookup both the
+	// multihash+path and the base32-cidv1 + path
+	if !c.Defined() { // if we didn't decode before...
+		c, err = cid.Decode(cidStr)
+		if err != nil {
+			logger.Warnf("could not decode %s as CID: %s", key, err)
+			return StatusResponse{
+				Path:     p,
+				Status:   StatusErrored,
+				Filename: dl.Filename,
+				Error:    err,
+			}
+		}
+	}
+
+	prefix := c.Prefix()
+	for codec, blocks := range dl.DoubleHashBlocksDB {
+		// <cidv1base32>/<path>
+		// TODO: we should be able to disable this part with an Option
+		// or a hint for denylists not using it.
+		v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
+		v1b32path := v1b32
+		// badbits appends / on empty subpath. and hashes that
+		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
+		v1b32path += "/" + subpath
+		doubleLegacy, err := multihash.Sum([]byte(v1b32path), codec, -1)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+
+		// encode as b58 which is the key we use for the BlocksDB.
+		b58 := doubleLegacy.B58String()
+		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", codec, b58)
+		entries, _ := blocks.Load(b58)
+		status, entry := entries.CheckPathStatus("")
+		if status != StatusNotFound { // Hit!
+			return StatusResponse{
+				Path:     p,
+				Status:   status,
+				Filename: dl.Filename,
+				Entry:    entry,
+			}
+		}
+
+		// <cidv0>/<path>
+		v0path := c.Hash().B58String()
+		if subpath != "" {
+			v0path += "/" + subpath
+		}
+		double, err := multihash.Sum([]byte(v0path), codec, -1)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+		b58 = double.B58String()
+		logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", codec, b58)
+		entries, _ = blocks.Load(b58)
+		status, entry = entries.CheckPathStatus("")
+		if status != StatusNotFound { // Hit!
+			return StatusResponse{
+				Path:     p,
+				Status:   status,
+				Filename: dl.Filename,
+				Entry:    entry,
+			}
+		}
+	}
+	return StatusResponse{
+		Path:     p,
+		Status:   StatusNotFound,
+		Filename: dl.Filename,
+	}
+}
+
 // IsPathBlocked provides Blocking Status for a given path.  This is done by
 // interpreting the full path and checking for blocked Path, IPFS, IPNS or
 // double-hashed items matching it.
@@ -469,183 +683,45 @@ func (dl *Denylist) Close() error {
 //   - A small number of path-only match rules using prefixes are used.
 func (dl *Denylist) IsPathBlocked(p path.Path) StatusResponse {
 	segments := p.Segments()
-	subPath := path.Join(segments[2:])
+	if len(segments) < 2 {
+		return StatusResponse{
+			Path:     p,
+			Status:   StatusErrored,
+			Filename: dl.Filename,
+			Error:    errors.New("path is too short"),
+		}
+	}
+	proto := segments[0]
+	key := segments[1]
+	subpath := path.Join(segments[2:])
 
 	// First, check that we are not blocking this subpath in general
-	// FIXME: broken for prefix paths. Must check all paths.
-	if len(subPath) > 0 {
-		logger.Debugf("IsPathBlocked load path: %s", subPath)
-		pathBlockEntries, _ := dl.PathBlocksDB.Load(subPath)
-		status, entry := pathBlockEntries.CheckPathStatus(subPath)
-		if status != StatusNotFound { // hit!
-			return StatusResponse{
-				Path:     p,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
+	if len(subpath) > 0 {
+		if resp := dl.IsSubpathBlocked(subpath); resp.Status != StatusNotFound {
+			resp.Path = p
+			return resp
 		}
+
 	}
 
 	// Second, check that we are not blocking ipfs or ipns paths
 	// like this one.
 
 	// ["ipfs", "<cid>", ...]
-	key := segments[1]
-	var blocks *BlocksDB
-	switch segments[0] {
-	case "ipns":
-		// Check if it is a CID and use the multihash as key then
-		c, err := cid.Decode(key)
-		if err == nil {
-			key = c.Hash().B58String()
-		}
-		blocks = dl.IPNSBlocksDB
-	case "ipfs", "ipld":
-		// This could be a shortcut to let the work to the
-		// blockservice.  Assuming IsCidBlocked() is going to be
-		// called later down the stack (by IPFS).
-		//
-		// TODO: enable this with options.
-		// if p.IsJustAKey() {
-		// 	return false
-		// }
 
-		if len(key) != 46 || key[:2] != "Qm" {
-			// Key is not a CIDv0, we need to convert other CIDs.
-			// convert to Multihash (cidV0)
-			c, err := cid.Decode(key)
-			if err != nil {
-				logger.Warnf("could not decode %s as CID: %s", segments[1], err)
-				return StatusResponse{
-					Path:     p,
-					Status:   StatusErrored,
-					Filename: dl.Filename,
-					Error:    err,
-				}
-			}
-			key = c.Hash().B58String()
-		}
-		blocks = dl.IPFSBlocksDB
+	switch proto {
+	case "ipns":
+		return dl.IsIPNSPathBlocked(key, subpath)
+	case "ipfs":
+		return dl.IsIPFSPathBlocked(key, subpath)
+	case "ipld":
+		return dl.IsIPLDPathBlocked(key, subpath)
 	default:
 		return StatusResponse{
 			Path:     p,
 			Status:   StatusNotFound,
 			Filename: dl.Filename,
 		}
-	}
-
-	logger.Debugf("IsPathBlocked load IPFS/IPNS: %s %s", key, subPath)
-	entries, _ := blocks.Load(key)
-	status, entry := entries.CheckPathStatus(subPath)
-	if status != StatusNotFound { // Hit!
-		return StatusResponse{
-			Path:     p,
-			Status:   status,
-			Filename: dl.Filename,
-			Entry:    entry,
-		}
-	}
-
-	// From this point, check double-hash blocks
-	// Do the easy one first: ipns paths are double-hashed straight
-	if segments[0] == "ipns" {
-		for codec, blocks := range dl.DoubleHashBlocksDB {
-			double, err := multihash.Sum([]byte(p), codec, -1)
-			if err != nil {
-				logger.Error(err)
-				continue
-			}
-			b58 := double.B58String()
-			logger.Debugf("IsPathBlocked load IPNS doublehash: %s", b58)
-			entries, _ := blocks.Load(b58)
-			status, entry := entries.CheckPathStatus("")
-			if status != StatusNotFound { // Hit!
-				return StatusResponse{
-					Path:     p,
-					Status:   status,
-					Filename: dl.Filename,
-					Entry:    entry,
-				}
-			}
-		}
-		return StatusResponse{
-			Path:     p,
-			Status:   StatusNotFound,
-			Filename: dl.Filename,
-		}
-	}
-
-	// for ipld or ipfs paths we need to lookup both the multihash+path
-	// and the base32-cidv1 + path
-	c, err := cid.Decode(segments[1])
-	if err != nil {
-		logger.Warnf("could not decode %s as CID: %s", segments[1], err)
-		return StatusResponse{
-			Path:     p,
-			Status:   StatusErrored,
-			Filename: dl.Filename,
-			Error:    err,
-		}
-	}
-	prefix := c.Prefix()
-	for codec, blocks := range dl.DoubleHashBlocksDB {
-		// <cidv1base32>/<path>
-		// FIXME: are we sure badbits is not hardcoding with raw codec?
-		// TODO: we should be able to disable this part with an Option or a hint
-		// for denylists not using it.
-		v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
-		v1b32path := v1b32
-		// badbits appends / on empty subpath. and hashes that
-		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
-		v1b32path += "/" + subPath
-		doubleLegacy, err := multihash.Sum([]byte(v1b32path), codec, -1)
-		if err != nil {
-			logger.Error(err)
-			continue
-		} else {
-			b58 := doubleLegacy.B58String()
-			logger.Debugf("IsPathBlocked load IPFS doublehash (legacy): %d %s", codec, b58)
-			entries, _ := blocks.Load(b58)
-			status, entry := entries.CheckPathStatus("")
-			if status != StatusNotFound { // Hit!
-				return StatusResponse{
-					Path:     p,
-					Status:   status,
-					Filename: dl.Filename,
-					Entry:    entry,
-				}
-			}
-		}
-
-		// <cidv0>/<path>
-		v0path := c.Hash().B58String()
-		if subPath != "" {
-			v0path += "/" + subPath
-		}
-		double, err := multihash.Sum([]byte(v0path), codec, -1)
-		if err != nil {
-			logger.Error(err)
-			continue
-		} else {
-			b58 := double.B58String()
-			logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", codec, b58)
-			entries, _ := blocks.Load(b58)
-			status, entry := entries.CheckPathStatus("")
-			if status != StatusNotFound { // Hit!
-				return StatusResponse{
-					Path:     p,
-					Status:   status,
-					Filename: dl.Filename,
-					Entry:    entry,
-				}
-			}
-		}
-	}
-	return StatusResponse{
-		Path:     p,
-		Status:   StatusNotFound,
-		Filename: dl.Filename,
 	}
 }
 

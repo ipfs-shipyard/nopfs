@@ -81,7 +81,7 @@ func (blocker *Blocker) IsCidBlocked(c cid.Cid) StatusResponse {
 // thus the denylist position during Blocker creation affects which one has
 // preference.
 //
-// Note that StatusResponse.Cid will be unset. See Denylist.IsCidBlocked()
+// Note that StatusResponse.Cid will be unset. See Denylist.IsPathBlocked()
 // for more info.
 func (blocker *Blocker) IsPathBlocked(p path.Path) StatusResponse {
 	for _, dl := range blocker.Denylists {
