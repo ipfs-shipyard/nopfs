@@ -4,4 +4,9 @@ plugin:
 install-plugin:
 	$(MAKE) -C ipfs/plugin install
 
-.PHONY: plugin install-plugin
+check:
+	go vet ./...
+	staticcheck --checks all ./...
+	misspell -error -locale US .
+
+.PHONY: plugin install-plugin check

@@ -1,0 +1,91 @@
+name: Tests
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master, dependency-upgrades ]
+
+env:
+  GO: "1.20"
+  PLUGIN_GO: "1.20" # should match Kubo i guess
+
+jobs:
+  tests:
+    name: "Tests"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+        path: nopfs
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO }}
+
+    - name: Tests
+      working-directory: nopfs
+      run: go test -v -timeout 15m -coverprofile=coverage.txt -covermode=atomic .
+
+    - name: Coverage
+      uses: codecov/codecov-action@v3
+      with:
+        directory: nopfs
+
+  check:
+    name: "Static, syntax and spelling checks"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: ipfs/kubo
+        fetch-depth: 2
+        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        path: kubo
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+        path: nopfs
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ env.GO }}
+
+    - name: Install staticcheck
+      run: go install honnef.co/go/tools/cmd/staticcheck@latest
+
+    - name: Install misspell
+      run: go install github.com/client9/misspell/cmd/misspell@latest
+
+    - name: Check
+      working-directory: nopfs
+      run: cd ipfs && go mod edit -replace=github.com/ipfs/kubo=../../kubo && cd .. && make check
+
+  plugin:
+    name: "Plugin"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        repository: ipfs/kubo
+        fetch-depth: 2
+        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        path: kubo
+
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+        path: nopfs
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.PLUGIN_GO }}
+
+    - name: Plugin
+      working-directory: nopfs
+      run: cd ipfs && go mod edit -replace=github.com/ipfs/kubo=../../kubo && cd .. && make plugin

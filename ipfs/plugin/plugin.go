@@ -12,6 +12,7 @@ import (
 
 var logger = logging.Logger("nopfs")
 
+// Plugins sets the list of plugins to be loaded.
 var Plugins = []plugin.Plugin{
 	&nopfsPlugin{},
 }
@@ -34,6 +35,7 @@ func (p *nopfsPlugin) Init(env *plugin.Environment) error {
 	return nil
 }
 
+// MakeBlocker is a factory for the blocker so that it can be provided with Fx.
 func MakeBlocker() (*nopfs.Blocker, error) {
 	files, err := nopfs.GetDenylistFiles()
 	if err != nil {

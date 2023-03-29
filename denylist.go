@@ -390,7 +390,7 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 		bpath, _ := NewBlockedPath("")
 		e.Path = bpath
 
-		// Store it in the appropiate BlocksDB (per mhtype).
+		// Store it in the appropriate BlocksDB (per mhtype).
 		key := e.Multihash.B58String()
 		if blocks := dl.DoubleHashBlocksDB[mhType]; blocks == nil {
 			dl.DoubleHashBlocksDB[mhType] = &BlocksDB{}
