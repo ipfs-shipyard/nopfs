@@ -1,4 +1,4 @@
-package nopfs
+package ipfs
 
 import (
 	"context"

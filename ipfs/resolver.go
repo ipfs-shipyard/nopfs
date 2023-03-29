@@ -1,8 +1,9 @@
-package nopfs
+package ipfs
 
 import (
 	"context"
 
+	"github.com/hsanjuan/nopfs"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"
@@ -13,13 +14,13 @@ var _ resolver.Resolver = (*Resolver)(nil)
 
 // Resolver implements a blocking path.Resolver.
 type Resolver struct {
-	blocker  *Blocker
+	blocker  *nopfs.Blocker
 	resolver resolver.Resolver
 }
 
 // WrapResolver wraps the given path Resolver with a content-blocking layer
 // for Resolve operations.
-func WrapResolver(res resolver.Resolver, blocker *Blocker) resolver.Resolver {
+func WrapResolver(res resolver.Resolver, blocker *nopfs.Blocker) resolver.Resolver {
 	logger.Info("Path resolved wrapped with content blocker")
 	return &Resolver{
 		blocker:  blocker,
