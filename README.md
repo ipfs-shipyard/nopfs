@@ -94,7 +94,7 @@ hints:
   - [x] Content-blocking-enabled IPFS Path resolver implementation
   - [ ] Mime-type blocking
   - [x] Kubo plugin
-  - [ ] Automatic, comprehensive testing of all rule types and edge cases
+  - [x] Automatic, comprehensive testing of all rule types and edge cases
   - [ ] Work with a stable release of Kubo
   - [ ] Prebuilt plugin binaries
 
@@ -107,3 +107,5 @@ The plugin works with [Kubo@9300769122d9151ea4e0861bce5dca9c1e411e96](https://gi
   - Running `make plugin-install` (here on the nopfs repo) will build and install the `nopfs.so` plugin into `~/.ipfs/plugins`.
 
 From that point, starting Kubo should load the plugin and automatically work with denylists (files with extension `.deny`) found in `/etc/ipfs/denylists` and `$XDG_CONFIG_HOME/ipfs/denylists` (usually `~/.config/ipfs/denylists`).
+
+We will be improving these instructions once we can work on mainline Kubo.
