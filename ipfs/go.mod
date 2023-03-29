@@ -1,13 +1,13 @@
-module github.com/hsanjuan/nopfs/ipfs
+module github.com/hsanjuan/ipfs-shipyard/ipfs
 
 go 1.18
 
 replace github.com/ipfs/kubo => ../../../ipfs/kubo
 
-replace github.com/hsanjuan/nopfs => ../
+replace github.com/ipfs-shipyard/nopfs => ../
 
 require (
-	github.com/hsanjuan/nopfs v0.0.0-00010101000000-000000000000
+	github.com/ipfs-shipyard/nopfs v0.0.0-00010101000000-000000000000
 	github.com/ipfs/go-blockservice v0.5.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-blockstore v1.2.0

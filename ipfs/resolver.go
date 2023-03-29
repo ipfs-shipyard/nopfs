@@ -3,7 +3,7 @@ package ipfs
 import (
 	"context"
 
-	"github.com/hsanjuan/nopfs"
+	"github.com/ipfs-shipyard/nopfs"
 	"github.com/ipfs/go-cid"
 	"github.com/ipfs/go-path"
 	"github.com/ipfs/go-path/resolver"

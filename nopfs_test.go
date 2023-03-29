@@ -4,7 +4,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/hsanjuan/nopfs/tester"
+	"github.com/ipfs-shipyard/nopfs/tester"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/go-path"

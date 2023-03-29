@@ -3,7 +3,7 @@ package ipfs
 import (
 	"context"
 
-	"github.com/hsanjuan/nopfs"
+	"github.com/ipfs-shipyard/nopfs"
 	"github.com/ipfs/go-namesys"
 	"github.com/ipfs/go-path"
 	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"

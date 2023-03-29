@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/hsanjuan/nopfs"
-	"github.com/hsanjuan/nopfs/ipfs"
+	"github.com/ipfs-shipyard/nopfs"
+	"github.com/ipfs-shipyard/nopfs/ipfs"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/node"

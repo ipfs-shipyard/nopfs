@@ -1,4 +1,4 @@
-module github.com/hsanjuan/nopfs
+module github.com/ipfs-shipyard/nopfs
 
 go 1.18
 

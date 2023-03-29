@@ -3,7 +3,7 @@ package ipfs
 import (
 	"context"
 
-	"github.com/hsanjuan/nopfs"
+	"github.com/ipfs-shipyard/nopfs"
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
