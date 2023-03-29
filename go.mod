@@ -4,8 +4,11 @@ go 1.18
 
 replace github.com/ipfs/kubo => ../../ipfs/kubo
 
+replace github.com/hsanjuan/nopfs/tester => ./tester
+
 require (
 	github.com/fsnotify/fsnotify v1.6.0
+	github.com/hsanjuan/nopfs/tester v0.0.0-00010101000000-000000000000
 	github.com/ipfs/go-blockservice v0.5.0
 	github.com/ipfs/go-cid v0.3.2
 	github.com/ipfs/go-ipfs-blockstore v1.2.0

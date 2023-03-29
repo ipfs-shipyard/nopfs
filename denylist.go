@@ -93,7 +93,7 @@ type Denylist struct {
 	PathPrefixBlocks   Entries
 	// MimeBlocksDB
 
-	f       *os.File
+	f       io.ReadSeekCloser
 	watcher *fsnotify.Watcher
 }
 
@@ -121,6 +121,22 @@ func NewDenylist(filepath string, follow bool) (*Denylist, error) {
 	}
 
 	err = dl.parseAndFollow(follow)
+	return &dl, err
+}
+
+// NewDenylistReader processes a denylist from the given reader (parses all
+// its entries).
+func NewDenylistReader(r io.ReadSeekCloser) (*Denylist, error) {
+	dl := Denylist{
+		Filename:           "",
+		f:                  r,
+		IPFSBlocksDB:       &BlocksDB{},
+		IPNSBlocksDB:       &BlocksDB{},
+		PathBlocksDB:       &BlocksDB{},
+		DoubleHashBlocksDB: make(map[uint64]*BlocksDB),
+	}
+
+	err := dl.parseAndFollow(false)
 	return &dl, err
 }
 
@@ -476,7 +492,9 @@ func (dl *Denylist) IsSubpathBlocked(subpath string) StatusResponse {
 			Entry:    entry,
 		}
 	}
-	// Check every prefix path.
+	// Check every prefix path.  Note: this is very innefficient, we
+	// should have some HAMT that we can traverse with every character if
+	// we were to support a large number of subpath-prefix blocks.
 	status, entry = dl.PathPrefixBlocks.CheckPathStatus(subpath)
 	return StatusResponse{
 		Status:   status,
@@ -490,7 +508,12 @@ func (dl *Denylist) IsSubpathBlocked(subpath string) StatusResponse {
 func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	subpath = strings.TrimPrefix(subpath, "/")
 
-	p := path.FromString("/ipns/" + name + "/" + subpath)
+	var p path.Path
+	if len(subpath) > 0 {
+		p = path.FromString("/ipns/" + name + "/" + subpath)
+	} else {
+		p = path.FromString("/ipns/" + name)
+	}
 	key := name
 	// Check if it is a CID and use the multihash as key then
 	c, err := cid.Decode(key)
@@ -553,7 +576,12 @@ func (dl *Denylist) IsIPLDPathBlocked(cidStr, subpath string) StatusResponse {
 func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) StatusResponse {
 	subpath = strings.TrimPrefix(subpath, "/")
 
-	p := path.FromString("/" + protocol + "/" + cidStr + "/" + subpath)
+	var p path.Path
+	if len(subpath) > 0 {
+		p = path.FromString("/" + protocol + "/" + cidStr + "/" + subpath)
+	} else {
+		p = path.FromString("/" + protocol + "/" + cidStr)
+	}
 	key := cidStr
 
 	// This could be a shortcut to let the work to the

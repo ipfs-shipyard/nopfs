@@ -1,0 +1,86 @@
+version: 1
+name: "Testing denylist"
+description: "This denylist is used to test blocker implementations. See tester.go."
+author: "@hsanjuan"
+---
+# Most CIDs used correspond to adding the rule name (rule1, rule2...) with raw-leaves disabled. ie. `echo -n "rule1" | ipfs add --raw-leaves=false --only-hash --cid-version=1`.
+
+# rule1
+# Blocking by CID
+# This should block not only this, but also any
+# CID with the same underlying multihash like
+# bafkreihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq or
+# QmesfgDQ3q6prBy2Kg2gKbW4MAGuWiRP2DVuGA5MZSERLo
+/ipfs/bafybeihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq
+
+# rule2
+# Block all subpaths
+/ipfs/QmdWFA9FL52hx3j9EJZPQP1ZUH8Ygi5tLCX2cRDs6knSf8/*
+
+# rule3
+# Block some subpaths
+/ipfs/Qmah2YDTfrox4watLCr3YgKyBwvjq8FJZEFdWY6WtJ3Xt2/test*
+
+# rule4
+# Block some subpaths alt
+/ipfs/QmTuvSQbEDR3sarFAN9kAeXBpiBCyYYNxdxciazBba11eC/test/*
+
+# rule5
+# Block some subpaths with exceptions
+/ipfs/QmUboz9UsQBDeS6Tug1U8jgoFkgYxyYood9NDyVURAY9pK/blocked*
++/ipfs/QmUboz9UsQBDeS6Tug1U8jgoFkgYxyYood9NDyVURAY9pK/blockednot
++/ipfs/QmUboz9UsQBDeS6Tug1U8jgoFkgYxyYood9NDyVURAY9pK/blocked/not
++/ipfs/QmUboz9UsQBDeS6Tug1U8jgoFkgYxyYood9NDyVURAY9pK/blocked/exceptions*
+
+# rule6
+# Block IPNS domain name
+/ipns/domain.example
+
+# rule7
+# Block IPNS domain name and path
+/ipns/domain2.example/path
+
+# rule8
+# Block IPNS key
+# This should block not only this string but
+# also base32
+# bafzaajaiaejcaotjfs57kieazxny5japcmy5p2pgv2cic77tu6ogghttvurnrufx
+# or 12D3KooWDkNqEJNmreF3NYYFK1ws7Ra2fuW6cHBTu567SPV3LdYA
+/ipns/k51qzi5uqu5dhmzyv3zac033i7rl9hkgczxyl81lwoukda2htteop7d3x0y1mf
+
+# rule9
+# Block mime type with exceptions
+/mime/image/*
++/mime/image/gif
+
+# rule10
+# Legacy CID double-hash block
+# sha256(bafybeiefwqslmf6zyyrxodaxx4vwqircuxpza5ri45ws3y5a62ypxti42e/)
+# blocks only this cid
+//d9d295bde21f422d471a90f2a37ec53049fdf3e5fa3ee2e8f20e10003da429e7
+
+# rule11
+# Legacy Path double-hash block
+# This should block
+# bafybeiefwqslmf6zyyrxodaxx4vwqircuxpza5ri45ws3y5a62ypxti42e/path
+# (see previous rule)
+# but not any other paths.
+//3f8b9febd851873b3774b937cce126910699ceac56e72e64b866f8e258d09572
+
+# rule12
+# Double hash CID block
+# base58btc-sha256-multihash(QmVTF1yEejXd9iMgoRTFDxBv7HAz9kuZcQNBzHrceuK9HR)
+# This should block bafybeidjwik6im54nrpfg7osdvmx7zojl5oaxqel5cmsz46iuelwf5acja
+# and its CIDv0 form QmVTF1yEejXd9iMgoRTFDxBv7HAz9kuZcQNBzHrceuK9HR
+# and generally any CID with that multihash.
+//QmX9dhRcQcKUw3Ws8485T5a9dtjrSCQaUAHnG4iK9i4ceM
+
+# rule13
+# Double hash Path block using blake3 hashing
+# base58btc-blake3-multihash(gW7Nhu4HrfDtphEivm3Z9NNE7gpdh5Tga8g6JNZc1S8E47/path)
+# This should block /ipfs/bafyb4ieqht3b2rssdmc7sjv2cy2gfdilxkfh7623nvndziyqnawkmo266a/path
+# And /ipfs/bafyb4ieqht3b2rssdmc7sjv2cy2gfdilxkfh7623nvndziyqnawkmo266a/path
+# (different codec)
+# And /ipfs/f01701e20903cf61d46521b05f926ba1634628d0bba8a7ffb5b6d5a3ca310682ca63b5ef0/path
+# But not /path2
+//QmbK7LDv5NNBvYQzNfm2eED17SNLt1yNMapcUhSuNLgkqz

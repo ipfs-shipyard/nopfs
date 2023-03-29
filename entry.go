@@ -35,6 +35,7 @@ func (entries Entries) CheckPathStatus(p string) (Status, Entry) {
 	// start by the last one, since latter items have preference.
 	for i := len(entries) - 1; i >= 0; i-- {
 		e := entries[i]
+		logger.Debugf("check-path: %s matches %s", e.Path.Path, p)
 		if e.Path.Matches(p) {
 			// if we find a negative rule that matches the path
 			// then it is not blocked.
@@ -105,15 +106,14 @@ func (bpath BlockedPath) Matches(path string) bool {
 		return true
 	}
 
-	if bpath.Prefix {
-		// Prefix matches prefix
-		// otherwise exact match
-		// bpath.Path already sanitized
-		if strings.HasPrefix(path, bpath.Path) {
-			return true
-		} else if bpath.Path == path {
-			return true
-		}
+	// Prefix matches prefix
+	// otherwise exact match
+	// bpath.Path already sanitized
+	if bpath.Prefix && strings.HasPrefix(path, bpath.Path) {
+		return true
+	} else if bpath.Path == path {
+		return true
 	}
+
 	return false
 }
