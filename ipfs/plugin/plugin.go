@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/hsanjuan/nopfs"
+	"github.com/hsanjuan/nopfs/ipfs"
 	logging "github.com/ipfs/go-log/v2"
 	"github.com/ipfs/kubo/core"
 	"github.com/ipfs/kubo/core/node"
@@ -46,8 +47,8 @@ func MakeBlocker() (*nopfs.Blocker, error) {
 func PathResolvers(fetchers node.FetchersIn, blocker *nopfs.Blocker) node.PathResolversOut {
 	res := node.PathResolverConfig(fetchers)
 	return node.PathResolversOut{
-		IPLDPathResolver:   nopfs.WrapResolver(res.IPLDPathResolver, blocker),
-		UnixFSPathResolver: nopfs.WrapResolver(res.UnixFSPathResolver, blocker),
+		IPLDPathResolver:   ipfs.WrapResolver(res.IPLDPathResolver, blocker),
+		UnixFSPathResolver: ipfs.WrapResolver(res.UnixFSPathResolver, blocker),
 	}
 }
 
@@ -58,8 +59,8 @@ func (p *nopfsPlugin) Options(info core.FXNodeInfo) ([]fx.Option, error) {
 	opts := append(
 		info.FXOptions,
 		fx.Provide(MakeBlocker),
-		fx.Decorate(nopfs.WrapBlockService),
-		fx.Decorate(nopfs.WrapNameSystem),
+		fx.Decorate(ipfs.WrapBlockService),
+		fx.Decorate(ipfs.WrapNameSystem),
 		fx.Decorate(PathResolvers),
 	)
 	return opts, nil

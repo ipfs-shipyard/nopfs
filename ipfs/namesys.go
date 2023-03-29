@@ -3,6 +3,7 @@ package ipfs
 import (
 	"context"
 
+	"github.com/hsanjuan/nopfs"
 	"github.com/ipfs/go-namesys"
 	"github.com/ipfs/go-path"
 	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
@@ -13,13 +14,13 @@ var _ namesys.NameSystem = (*NameSystem)(nil)
 
 // NameSystem implements a blocking namesys.NameSystem implementation.
 type NameSystem struct {
-	blocker *Blocker
+	blocker *nopfs.Blocker
 	ns      namesys.NameSystem
 }
 
 // WrapNameSystem wraps the given NameSystem with a content-blocking layer
 // for Resolve operations.
-func WrapNameSystem(ns namesys.NameSystem, blocker *Blocker) namesys.NameSystem {
+func WrapNameSystem(ns namesys.NameSystem, blocker *nopfs.Blocker) namesys.NameSystem {
 	logger.Info("NameSystem wrapped with content blocker")
 	return &NameSystem{
 		blocker: blocker,

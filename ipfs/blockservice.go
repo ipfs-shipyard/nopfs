@@ -3,6 +3,7 @@ package ipfs
 import (
 	"context"
 
+	"github.com/hsanjuan/nopfs"
 	blockservice "github.com/ipfs/go-blockservice"
 	"github.com/ipfs/go-cid"
 	blockstore "github.com/ipfs/go-ipfs-blockstore"
@@ -14,13 +15,13 @@ var _ blockservice.BlockService = (*BlockService)(nil)
 
 // BlockService implements a blocking BlockService.
 type BlockService struct {
-	blocker *Blocker
+	blocker *nopfs.Blocker
 	bs      blockservice.BlockService
 }
 
 // WrapBlockService wraps the given BlockService with a content-blocking layer
 // for Get and Add operations.
-func WrapBlockService(bs blockservice.BlockService, blocker *Blocker) blockservice.BlockService {
+func WrapBlockService(bs blockservice.BlockService, blocker *nopfs.Blocker) blockservice.BlockService {
 	logger.Info("BlockService wrapped with content blocker")
 
 	return &BlockService{
