@@ -7,8 +7,11 @@ NOPfs is an implementation of
 content blocking to the go-ipfs stack and particularly to Kubo.
 
 NOPfs is quite alpha because:
-  * Lacking some [functionality from Kubo for the plugin](https://github.com/ipfs/kubo/pull/9750)
+  * Depends on functionality that was recently introduced to Kubo (so it requires using master)
   * Not fully optimized or tweakable
+
+As soon as we can build a plugin on top of a stable version of Kubo (or
+provide a painless approach to it), we will.
 
 The list of blocked content is managed via denylist files which have the following syntax:
 
