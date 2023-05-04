@@ -9,9 +9,9 @@ import (
 	"syscall"
 
 	"github.com/ipfs-shipyard/nopfs"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/go-path"
 )
 
 func printPrompt() {

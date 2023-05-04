@@ -1,8 +1,8 @@
 package nopfs
 
 import (
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-path"
 	"go.uber.org/multierr"
 )
 
