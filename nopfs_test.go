@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/ipfs-shipyard/nopfs/tester"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 	logging "github.com/ipfs/go-log/v2"
-	"github.com/ipfs/go-path"
 )
 
 type testBlocker struct {

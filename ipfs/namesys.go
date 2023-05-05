@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/ipfs-shipyard/nopfs"
-	"github.com/ipfs/go-namesys"
-	"github.com/ipfs/go-path"
-	opts "github.com/ipfs/interface-go-ipfs-core/options/namesys"
+	opts "github.com/ipfs/boxo/coreiface/options/namesys"
+	"github.com/ipfs/boxo/namesys"
+	"github.com/ipfs/boxo/path"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
 )
 

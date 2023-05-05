@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-path"
 )
 
 //go:embed test.deny
