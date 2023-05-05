@@ -42,7 +42,7 @@ jobs:
       with:
         repository: ipfs/kubo
         fetch-depth: 2
-        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        ref: a6f446a4bab78b3d8b814474f1532f7bebcdc9c1
         path: kubo
 
     - uses: actions/checkout@v3
@@ -73,7 +73,7 @@ jobs:
       with:
         repository: ipfs/kubo
         fetch-depth: 2
-        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        ref: a6f446a4bab78b3d8b814474f1532f7bebcdc9c1
         path: kubo
 
     - uses: actions/checkout@v3

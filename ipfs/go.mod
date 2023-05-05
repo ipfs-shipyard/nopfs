@@ -2,7 +2,7 @@ module github.com/ipfs-shipyard/nopfs/ipfs
 
 go 1.18
 
-replace github.com/ipfs/kubo => ../kubo
+replace github.com/ipfs/kubo => ../../../ipfs/kubo
 
 replace github.com/ipfs-shipyard/nopfs => ../
 

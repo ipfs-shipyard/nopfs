@@ -103,7 +103,7 @@ hints:
 
 ## Using with Kubo
 
-The plugin works with [Kubo@9300769122d9151ea4e0861bce5dca9c1e411e96](https://github.com/ipfs/kubo/pull/9750/commits/9300769122d9151ea4e0861bce5dca9c1e411e96), with the following caveats:
+The plugin works with [Kubo@a6f446a4bab78b3d8b814474f1532f7bebcdc9c1](https://github.com/ipfs/kubo/tree/a6f446a4bab78b3d8b814474f1532f7bebcdc9c1), with the following caveats:
 
   - `go.mod` has a replace directive. It should point to your local kubo git repository.
   - You should build the `ipfs` binary manually from the local kubo repo: `cd cmd/ipfs; CGO_ENABLED=1 go build`. Do not use `make build`.
