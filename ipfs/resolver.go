@@ -4,9 +4,9 @@ import (
 	"context"
 
 	"github.com/ipfs-shipyard/nopfs"
+	"github.com/ipfs/boxo/path"
+	"github.com/ipfs/boxo/path/resolver"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-path"
-	"github.com/ipfs/go-path/resolver"
 	"github.com/ipld/go-ipld-prime"
 )
 

@@ -7,8 +7,9 @@ on:
     branches: [ master, dependency-upgrades ]
 
 env:
-  GO: "1.20"
-  PLUGIN_GO: "1.20" # should match Kubo i guess
+  GO_VERSION: "1.19.10"
+  PLUGIN_GO_VERSION: "1.19.10" # should match Kubo i guess
+  KUBO_VERSION: "v0.21.0-rc1"
 
 jobs:
   tests:
@@ -23,7 +24,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: ${{ env.GO }}
+        go-version: ${{ env.GO_VERSION }}
 
     - name: Tests
       working-directory: nopfs
@@ -42,7 +43,7 @@ jobs:
       with:
         repository: ipfs/kubo
         fetch-depth: 2
-        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        ref: ${{ env.KUBO_VERSION }}
         path: kubo
 
     - uses: actions/checkout@v3
@@ -53,7 +54,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: ${{ env.GO }}
+        go-version: ${{ env.GO_VERSION }}
 
     - name: Install staticcheck
       run: go install honnef.co/go/tools/cmd/staticcheck@latest
@@ -63,7 +64,7 @@ jobs:
 
     - name: Check
       working-directory: nopfs
-      run: cd ipfs && go mod edit -replace=github.com/ipfs/kubo=../../kubo && cd .. && make check
+      run: make check
 
   plugin:
     name: "Plugin"
@@ -73,7 +74,7 @@ jobs:
       with:
         repository: ipfs/kubo
         fetch-depth: 2
-        ref: 9300769122d9151ea4e0861bce5dca9c1e411e96
+        ref: ${{ env.KUBO_VERSION }}
         path: kubo
 
     - uses: actions/checkout@v3
@@ -84,8 +85,8 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: ${{ env.PLUGIN_GO }}
+        go-version: ${{ env.PLUGIN_GO_VERSION }}
 
     - name: Plugin
       working-directory: nopfs
-      run: cd ipfs && go mod edit -replace=github.com/ipfs/kubo=../../kubo && cd .. && make plugin
+      run: make plugin

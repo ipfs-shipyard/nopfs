@@ -11,8 +11,8 @@ import (
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
-	"github.com/ipfs/go-path"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"
 	"go.uber.org/multierr"

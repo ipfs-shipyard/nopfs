@@ -4,11 +4,11 @@ import (
 	"context"
 
 	"github.com/ipfs-shipyard/nopfs"
-	blockservice "github.com/ipfs/go-blockservice"
+	blockservice "github.com/ipfs/boxo/blockservice"
+	blockstore "github.com/ipfs/boxo/blockstore"
+	exchange "github.com/ipfs/boxo/exchange"
+	blocks "github.com/ipfs/go-block-format"
 	"github.com/ipfs/go-cid"
-	blockstore "github.com/ipfs/go-ipfs-blockstore"
-	exchange "github.com/ipfs/go-ipfs-exchange-interface"
-	"github.com/ipfs/go-libipfs/blocks"
 )
 
 var _ blockservice.BlockService = (*BlockService)(nil)
