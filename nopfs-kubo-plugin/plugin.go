@@ -55,7 +55,7 @@ func PathResolvers(fetchers node.FetchersIn, blocker *nopfs.Blocker) node.PathRe
 }
 
 func (p *nopfsPlugin) Options(info core.FXNodeInfo) ([]fx.Option, error) {
-	logging.SetLogLevel("nopfs", "DEBUG")
+	logging.SetLogLevel("nopfs", "INFO")
 	logger.Info("Loading Nopfs plugin: content blocking")
 
 	opts := append(

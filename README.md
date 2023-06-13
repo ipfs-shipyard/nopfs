@@ -6,13 +6,6 @@ NOPfs is an implementation of
 [IPIP-383](https://github.com/ipfs/specs/pull/383) which add supports for
 content blocking to the go-ipfs stack and particularly to Kubo.
 
-NOPfs is quite alpha because:
-  * Depends on functionality that was recently introduced to Kubo (so it requires using master)
-  * Not fully optimized or tweakable
-
-As soon as we can build a plugin on top of a stable version of Kubo (or
-provide a painless approach to it), we will.
-
 The list of blocked content is managed via denylist files which have the following syntax:
 
 ```
@@ -98,17 +91,33 @@ hints:
   - [ ] Mime-type blocking
   - [x] Kubo plugin
   - [x] Automatic, comprehensive testing of all rule types and edge cases
-  - [ ] Work with a stable release of Kubo
-  - [ ] Prebuilt plugin binaries
+  - [x] Work with a stable release of Kubo
+  - [x] Prebuilt plugin binaries
 
-## Using with Kubo
+## Kubo plugin
 
-The plugin works with [Kubo@9300769122d9151ea4e0861bce5dca9c1e411e96](https://github.com/ipfs/kubo/pull/9750/commits/9300769122d9151ea4e0861bce5dca9c1e411e96), with the following caveats:
+NOpfs Kubo plugin pre-built binary releases are available in the
+[releases](https://github.com/ipfs-shipyard/nopfs/releases) section.
 
-  - `go.mod` has a replace directive. It should point to your local kubo git repository.
-  - You should build the `ipfs` binary manually from the local kubo repo: `cd cmd/ipfs; CGO_ENABLED=1 go build`. Do not use `make build`.
-  - Running `make plugin-install` (here on the nopfs repo) will build and install the `nopfs.so` plugin into `~/.ipfs/plugins`.
+Simply grab the binary for your system and drop it in the `~/.ipfs/plugins` folder.
 
-From that point, starting Kubo should load the plugin and automatically work with denylists (files with extension `.deny`) found in `/etc/ipfs/denylists` and `$XDG_CONFIG_HOME/ipfs/denylists` (usually `~/.config/ipfs/denylists`).
+From that point, starting Kubo should load the plugin and automatically work with denylists (files with extension `.deny`) found in `/etc/ipfs/denylists` and `$XDG_CONFIG_HOME/ipfs/denylists` (usually `~/.config/ipfs/denylists`). The plugin will log some lines as the ipfs daemon starts:
 
-We will be improving these instructions once we can work on mainline Kubo.
+```
+$ ipfs daemon --offline
+Initializing daemon...
+Kubo version: 0.21.0-rc1
+Repo version: 14
+System version: amd64/linux
+Golang version: go1.19.10
+2023-06-13T21:26:56.951+0200	INFO	nopfs	nopfs-kubo-plugin/plugin.go:59	Loading Nopfs plugin: content blocking
+2023-06-13T21:26:56.952+0200	INFO	nopfs	nopfs@v0.0.7/denylist.go:165	Processing /home/user/.config/ipfs/denylists/badbits.deny: badbits (2023-03-27) by @hsanjuan
+```
+
+The plugin can be manually built and installed for different versions of Kubo with:
+
+```
+git checkout nopfs-kubo-plugin/v<kubo-version>
+make plugin
+make install-plugin
+```
