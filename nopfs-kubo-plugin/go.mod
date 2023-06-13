@@ -4,7 +4,7 @@ go 1.19
 
 retract (
 	// Retract test releases that conflict with naming scheme.
-	[v0.21.0-rc1-test6, v0.21.0-rc1-test7, v0.21.0-rc1-test8, v0.21.0-rc1-test9, v0.21.0-rc1-test10]
+	[v0.21.0-rc1-test6, v0.21.0-rc1-test7, v0.21.0-rc1-test8, v0.21.0-rc1-test9, v0.21.0-rc1-test10, v0.21.0-rc1-test99]
 )
 
 require (
