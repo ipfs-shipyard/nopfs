@@ -1,8 +1,8 @@
 plugin:
-	$(MAKE) -C ipfs/nopfs-kubo-plugin all
+	$(MAKE) -C nopfs-kubo-plugin all
 
 install-plugin:
-	$(MAKE) -C ipfs/nopfs-kubo-plugin install
+	$(MAKE) -C nopfs-kubo-plugin install
 
 check:
 	go vet ./...
