@@ -3,9 +3,9 @@ module github.com/ipfs-shipyard/nopfs/ipfs
 go 1.18
 
 retract (
-	nopfs-kubo-plugin/v0.21.0-rc1-test6
-	nopfs-kubo-plugin/v0.21.0-rc1-test7
-	nopfs-kubo-plugin/v0.21.0-rc1-test8
+	v0.21.0-rc1-test6
+	v0.21.0-rc1-test7
+	v0.21.0-rc1-test8
 )
 
 require (
