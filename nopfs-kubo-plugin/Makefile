@@ -11,10 +11,10 @@ export CGO_ENABLED := 1
 all: build
 
 build: $(SRC)
-	go build $(GOFLAGS) -buildmode=plugin -o nopfs.so
+	go build $(GOFLAGS) -buildmode=plugin -trimpath -o nopfs-kubo-plugin.so
 
 install: build
 	mkdir -p "$(IPFS_PATH)/.ipfs/plugins"
-	install -Dm700 nopfs.so "$(IPFS_PATH)/plugins/nopfs.so"
+	install -Dm700 nopfs-kubo-plugin.so "$(IPFS_PATH)/plugins/nopfs"
 
 .PHONY: install
