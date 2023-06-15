@@ -8,8 +8,13 @@ env:
   GO_VERSION: "1.19.10" # must be same as official ipfs builds
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
+  build-artifacts:
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v3
       with:
@@ -30,6 +35,19 @@ jobs:
       run: |
         NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${{ env.GOHOSTOS }}_${{ env.GOHOSTARCH }}.tar.gz"
         mv nopfs-kubo-plugin/nopfs-kubo-plugin.tar.gz "$NAME"
+        echo "ARTIFACT_NAME=$NAME" >> "$GITHUB_ENV"
+    - name: Archive artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ env.ARTIFACT_NAME }}
+        path: nopfs-kubo-plugin_*.tar.gz
+
+  release:
+    needs: build-artifacts
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
