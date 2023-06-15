@@ -15,6 +15,6 @@ build: $(SRC)
 
 install: build
 	mkdir -p "$(IPFS_PATH)/.ipfs/plugins"
-	install -Dm700 nopfs-kubo-plugin.so "$(IPFS_PATH)/plugins/nopfs"
+	install -Dm700 nopfs-kubo-plugin.so "$(IPFS_PATH)/plugins/nopfs-kubo-plugin.so"
 
 .PHONY: install
