@@ -41,9 +41,9 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: nopfs-kubo-plugin_*.tar.gz
-
   release:
     needs: build-artifacts
+    runs-on: ubuntu-latest
     steps:
     - name: Download artifacts
       uses: actions/download-artifact@v3
