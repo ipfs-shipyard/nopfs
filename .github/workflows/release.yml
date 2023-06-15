@@ -51,7 +51,7 @@ jobs:
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: nopfs-kubo-plugin_*.tar.gz
+        files: ${{steps.download-artifacts.outputs.download-path}}/nopfs-kubo-plugin_*.tar.gz
         body: |
           This is a binary build of the NOpfs Kubo plugin targeting Kubo version v${{ env.RELEASE }}.
           
