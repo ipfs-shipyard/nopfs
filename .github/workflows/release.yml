@@ -1,0 +1,44 @@
+name: Release Kubo plugin
+
+on:
+  push:
+    tags:
+      - "nopfs-kubo-plugin/v*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: extract release name
+      run: |
+        RELEASE=$(basename ${{ github.ref_name }})
+        echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
+    - name: go env
+      run: go env > go.env
+    - name: Package plugin
+      run: make dist-plugin
+    - name: Rename package
+      run: |
+        source go.env
+        NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${GOHOSTOS}_${GOHOSTARCH}.tar.gz"
+        mv nopfs-kubo-plugin/nopfs-kubo-plugin.tar.gz "$NAME"
+        echo "NAME=$NAME" >> "$GITHUB_ENV"
+    - name: Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{ env.NAME }}
+        body: |
+          This is a binary build of the NOpfs Kubo plugin targeting Kubo version v${{ env.RELEASE }}.
+          
+          To install, unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
+          See the included README.md for more information.
+        name: ${{ github.ref_name }}
+
+        
