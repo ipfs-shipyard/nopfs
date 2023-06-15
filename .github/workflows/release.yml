@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04 # must match Kubo build OS.
     steps:
     - uses: actions/checkout@v3
       with:
@@ -16,23 +16,22 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: ${{ env.GO_VERSION }}
-    - name: extract release name
+    - name: Extract release name from tag
       run: |
         RELEASE=$(basename ${{ github.ref_name }})
         echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
     - name: Package plugin
       run: make dist-plugin
-    - name: go env
+    - name: Record Go environment
       run: go env >> "$GITHUB_ENV"      
     - name: Rename package
       run: |
         NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${{ env.GOHOSTOS }}_${{ env.GOHOSTARCH }}.tar.gz"
         mv nopfs-kubo-plugin/nopfs-kubo-plugin.tar.gz "$NAME"
-        echo "NAME=$NAME" >> "$GITHUB_ENV"
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ${{ env.NAME }}
+        files: nopfs-kubo-plugin_*.tar.gz
         body: |
           This is a binary build of the NOpfs Kubo plugin targeting Kubo version v${{ env.RELEASE }}.
           
