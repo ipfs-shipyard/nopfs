@@ -4,10 +4,12 @@ on:
   push:
     tags:
       - "nopfs-kubo-plugin/v*"
+env:
+  GO_VERSION: "1.19.10"
 
 jobs:
   build:
-    runs-on: ubuntu-20.04 # must match Kubo build OS.
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
       with:
@@ -38,5 +40,3 @@ jobs:
           To install, unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
           See the included README.md for more information.
         name: ${{ github.ref_name }}
-
-        
