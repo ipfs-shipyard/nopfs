@@ -57,9 +57,9 @@ jobs:
       with:
         files: nopfs-kubo-plugin_*.tar.gz/*
         body: |
-          This is a binary build of the NOpfs Kubo plugin targeting Kubo version v${{ env.RELEASE }}.
+          This is a binary build of the NOpfs Kubo plugin targeting Kubo version ${{ env.RELEASE }}.
           
-          To install, download the relevant file for your platform,
-          unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
+          To install, download the relevant asset for your platform, unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
+          
           See the included README.md for more information.
         name: ${{ github.ref_name }}
