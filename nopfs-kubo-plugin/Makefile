@@ -13,10 +13,10 @@ install: build
 	install -Dm700 nopfs-kubo-plugin "$(IPFS_PATH)/plugins/nopfs-kubo-plugin"
 
 dist: build
-	mkdir nopfs-kubo-plugin
-	cp nopfs-kubo-plugin README.md nopfs-kubo-plugin/
-	chmod +x nopfs/nopfs-kubo-plugin
-	tar --owner=0 --group=0 -zcf nopfs-kubo-plugin.tar.gz nopfs
+	mkdir -p dist/nopfs-kubo-plugin
+	cp nopfs-kubo-plugin README.md dist/nopfs-kubo-plugin/
+	chmod +x dist/nopfs-kubo-plugin/nopfs-kubo-plugin
+	tar -C dist --owner=0 --group=0 -zcf nopfs-kubo-plugin.tar.gz nopfs-kubo-plugin
 	rm -rf nopfs-kubo-plugin
 	echo "Packaged as nopfs-kubo-plugin.tar.gz"
 

@@ -1,6 +1,6 @@
 nopfs-kubo-plugin/nopfs-kubo-plugin
 nopfs-kubo-plugin/*.tar.gz
-nopfs-kubo-plugin/nopfs
+nopfs-kubo-plugin/dist
 cmd/nopfs/nopfs
 
 

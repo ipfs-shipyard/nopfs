@@ -21,13 +21,12 @@ jobs:
         RELEASE=$(basename ${{ github.ref_name }})
         echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
     - name: go env
-      run: go env > go.env
+      run: go env >> "$GITHUB_ENV"
     - name: Package plugin
       run: make dist-plugin
     - name: Rename package
       run: |
-        source go.env
-        NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${GOHOSTOS}_${GOHOSTARCH}.tar.gz"
+        NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${{ env.GOHOSTOS }}_${{ env.GOHOSTARCH }}.tar.gz"
         mv nopfs-kubo-plugin/nopfs-kubo-plugin.tar.gz "$NAME"
         echo "NAME=$NAME" >> "$GITHUB_ENV"
     - name: Release
