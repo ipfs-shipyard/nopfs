@@ -1,5 +1,8 @@
-plugin/nopfs.so
+nopfs-kubo-plugin/nopfs-kubo-plugin
+nopfs-kubo-plugin/*.tar.gz
+nopfs-kubo-plugin/nopfs
 cmd/nopfs/nopfs
+
 
 # Binaries for programs and plugins
 *.exe
