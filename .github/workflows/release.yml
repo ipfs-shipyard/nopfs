@@ -48,14 +48,18 @@ jobs:
     - name: Download artifacts
       id: download
       uses: actions/download-artifact@v3
-      
+    - name: Extract release name from tag
+      run: |
+        RELEASE=$(basename ${{ github.ref_name }})
+        echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"      
     - name: Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ${{steps.download.outputs.download-path}}/nopfs-kubo-plugin_*.tar.gz
+        files: nopfs-kubo-plugin_*.tar.gz/*
         body: |
           This is a binary build of the NOpfs Kubo plugin targeting Kubo version v${{ env.RELEASE }}.
           
-          To install, unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
+          To install, download the relevant file for your platform,
+          unpack the plugin file (`nopfs-kubo-plugin`) and place it in `~/.ipfs/plugins`.
           See the included README.md for more information.
         name: ${{ github.ref_name }}
