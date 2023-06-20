@@ -7,9 +7,9 @@ retract [v0.21.0-rc1-test10, v0.21.0-rc1-test999]
 
 require (
 	github.com/ipfs-shipyard/nopfs v0.0.7
-	github.com/ipfs-shipyard/nopfs/ipfs v0.10.0
+	github.com/ipfs-shipyard/nopfs/ipfs v0.10.1
 	github.com/ipfs/go-log/v2 v2.5.1
-	github.com/ipfs/kubo v0.21.0-rc2
+	github.com/ipfs/kubo v0.21.0-rc3
 	go.uber.org/fx v1.19.3
 )
 
@@ -53,7 +53,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.2 // indirect
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
-	github.com/ipfs/boxo v0.10.0 // indirect
+	github.com/ipfs/boxo v0.10.1 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
 	github.com/ipfs/go-block-format v0.1.2 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
@@ -90,9 +90,9 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-doh-resolver v0.4.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
-	github.com/libp2p/go-libp2p v0.27.6 // indirect
+	github.com/libp2p/go-libp2p v0.27.7 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
-	github.com/libp2p/go-libp2p-kad-dht v0.24.1 // indirect
+	github.com/libp2p/go-libp2p-kad-dht v0.24.2 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.6.3 // indirect
 	github.com/libp2p/go-libp2p-pubsub v0.9.3 // indirect
 	github.com/libp2p/go-libp2p-pubsub-router v0.6.0 // indirect
