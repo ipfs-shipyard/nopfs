@@ -1,9 +1,5 @@
-name: Release Kubo plugin
+name: Kubo plugin build, test, release
 
-on:
-  push:
-    tags:
-      - "nopfs-kubo-plugin/v*"
 env:
   GO_VERSION: "1.19.10" # must be same as official ipfs builds
 
@@ -41,8 +37,49 @@ jobs:
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: nopfs-kubo-plugin_*.tar.gz
-  release:
+
+  test-artifacts:
     needs: build-artifacts
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 2
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+    - name: Set Kubo version
+      run: |
+        V=`cat nopfs-kubo-plugin/go.mod | grep github.com/ipfs/kubo | grep -o 'v.*'`
+        echo "KUBO_VERSION=$V" >> "$GITHUB_ENV"
+    - name: Download artifact
+      id: download
+      uses: actions/download-artifact@v3
+      with:
+        name: nopfs-kubo-plugin_*_${{ env.OS }}_amd64.tar.gz
+    - name: Download unpack Kubo
+      run: |
+        wget https://dist.ipfs.tech/kubo/${{ env.KUBO_VERSION }}/kubo_${{ env.KUBO_VERSION }}_${{ env.GOHOSTOS }}-amd64.tar.gz
+        tar -xf kubo_${{ env.KUBO_VERSION }}_${{ env.GOHOSTOS }}-amd64.tar.gz
+        tar -xf nopfs-kubo-plugin_*
+        cp kubo/ipfs .
+        chmod +x ipfs
+    - name: Initialize IPFS and copy plugin
+      run: |
+        export IPFS_PATH=$(pwd)/ipfs-config
+        ipfs init
+        cp nopfs-kubo-plugin/nopfs-kubo-plugin ipfs-config/plugins/
+    - name: Check IPFS works with the plugin
+      run: ipfs version --all
+
+  release:
+    needs: test-artifacts
     runs-on: ubuntu-latest
     steps:
     - name: Download artifacts
@@ -54,6 +91,7 @@ jobs:
         echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"      
     - name: Release
       uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/nopfs-kubo-plugin/v')
       with:
         files: nopfs-kubo-plugin_*.tar.gz/*
         body: |
