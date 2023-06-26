@@ -352,6 +352,9 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 	} else if unprefixed, found := cutPrefix(rule, "+"); found {
 		e.AllowRule = true
 		rule = unprefixed
+	} else if unprefixed, found := cutPrefix(rule, "!"); found {
+		e.AllowRule = true
+		rule = unprefixed
 	}
 
 	switch {
