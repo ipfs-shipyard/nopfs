@@ -13,7 +13,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-20.04
           - macos-latest
     runs-on: ${{ matrix.os }}
     steps:
@@ -49,7 +49,7 @@ jobs:
     strategy:
       matrix:
         os:
-          - ubuntu-latest
+          - ubuntu-20.04
 # macos test fail with dist-built ipfs.
 #          - macos-latest
     runs-on: ${{ matrix.os }}
@@ -94,7 +94,7 @@ jobs:
   release:
     name: "Release"
     needs: test-artifacts
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Download artifacts
       id: download
