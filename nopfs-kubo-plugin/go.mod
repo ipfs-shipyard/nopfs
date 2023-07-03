@@ -6,10 +6,10 @@ go 1.19
 retract [v0.21.0-rc1-test10, v0.21.0-rc1-test999]
 
 require (
-	github.com/ipfs-shipyard/nopfs v0.0.7
+	github.com/ipfs-shipyard/nopfs v0.0.8
 	github.com/ipfs-shipyard/nopfs/ipfs v0.10.1
 	github.com/ipfs/go-log/v2 v2.5.1
-	github.com/ipfs/kubo v0.21.0-rc3
+	github.com/ipfs/kubo v0.21.0
 	go.uber.org/fx v1.19.3
 )
 
@@ -53,7 +53,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.2 // indirect
 	github.com/huin/goupnp v1.2.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
-	github.com/ipfs/boxo v0.10.1 // indirect
+	github.com/ipfs/boxo v0.10.2-0.20230629143123-2d3edc552442 // indirect
 	github.com/ipfs/go-bitfield v1.1.0 // indirect
 	github.com/ipfs/go-block-format v0.1.2 // indirect
 	github.com/ipfs/go-cid v0.4.1 // indirect
