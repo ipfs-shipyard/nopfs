@@ -5,7 +5,8 @@ on:
 
 
 env:
-  GO_VERSION: "1.19.12" # must be same as official ipfs builds
+  # must be same as official ipfs builds. See distributions/.tool-versions
+  GO_VERSION: "1.21.1"
 
 jobs:
   build-artifacts:
