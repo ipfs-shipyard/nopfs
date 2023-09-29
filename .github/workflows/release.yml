@@ -5,7 +5,8 @@ on:
 
 
 env:
-  GO_VERSION: "1.19.12" # must be same as official ipfs builds
+  # must be same as official ipfs builds. See distributions/.tool-versions
+  GO_VERSION: "1.21.1"
 
 jobs:
   build-artifacts:
@@ -31,7 +32,9 @@ jobs:
     - name: Package plugin
       run: make dist-plugin
     - name: Record Go environment
-      run: go env >> "$GITHUB_ENV"
+      run: |
+        echo "GOHOSTOS=$(go env GOHOSTOS)" >> "$GITHUB_ENV"
+        echo "GOHOSTARCH=$(go env GOHOSTARCH)" >> "$GITHUB_ENV"
     - name: Rename package
       run: |
         NAME="nopfs-kubo-plugin_${{ env.RELEASE }}_${{ env.GOHOSTOS }}_${{ env.GOHOSTARCH }}.tar.gz"
