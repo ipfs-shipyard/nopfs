@@ -22,7 +22,7 @@ type BlockService struct {
 // WrapBlockService wraps the given BlockService with a content-blocking layer
 // for Get and Add operations.
 func WrapBlockService(bs blockservice.BlockService, blocker *nopfs.Blocker) blockservice.BlockService {
-	logger.Info("BlockService wrapped with content blocker")
+	logger.Debug("BlockService wrapped with content blocker")
 
 	return &BlockService{
 		blocker: blocker,
@@ -39,6 +39,7 @@ func (nbs *BlockService) Close() error {
 // Gets a block unless CID has been blocked.
 func (nbs *BlockService) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
 	if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
+		logger.Error(err)
 		return nil, err
 	}
 	return nbs.bs.GetBlock(ctx, c)
@@ -49,6 +50,7 @@ func (nbs *BlockService) GetBlocks(ctx context.Context, ks []cid.Cid) <-chan blo
 	var filtered []cid.Cid
 	for _, c := range ks {
 		if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
+			logger.Error(err)
 			logger.Warnf("GetBlocks dropped blocked block: %s", err)
 		} else {
 			filtered = append(filtered, c)
@@ -70,6 +72,7 @@ func (nbs *BlockService) Exchange() exchange.Interface {
 // AddBlock adds a block unless the CID is blocked.
 func (nbs *BlockService) AddBlock(ctx context.Context, o blocks.Block) error {
 	if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
+		logger.Error(err)
 		return err
 	}
 	return nbs.bs.AddBlock(ctx, o)
@@ -80,6 +83,7 @@ func (nbs *BlockService) AddBlocks(ctx context.Context, bs []blocks.Block) error
 	var filtered []blocks.Block
 	for _, o := range bs {
 		if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
+			logger.Error(err)
 			logger.Warnf("AddBlocks dropped blocked block: %s", err)
 		} else {
 			filtered = append(filtered, o)

@@ -60,7 +60,7 @@ func (err *StatusError) Error() string {
 
 // ToError returns nil if the Status of the StatusResponse is Allowed or Not Found.
 // When the status is Blocked or Errored, it returns a StatusError.
-func (r StatusResponse) ToError() error {
+func (r StatusResponse) ToError() *StatusError {
 	if r.Status != StatusBlocked && r.Status != StatusErrored {
 		return nil
 	}
