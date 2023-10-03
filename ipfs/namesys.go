@@ -31,7 +31,7 @@ func WrapNameSystem(ns namesys.NameSystem, blocker *nopfs.Blocker) namesys.NameS
 // Resolve resolves an IPNS name unless it is blocked.
 func (ns *NameSystem) Resolve(ctx context.Context, name string, options ...opts.ResolveOpt) (path.Path, error) {
 	if err := ns.blocker.IsPathBlocked(path.FromString(name)).ToError(); err != nil {
-		logger.Error(err.Response)
+		logger.Warn(err.Response)
 		return "", err
 	}
 	return ns.ns.Resolve(ctx, name, options...)
@@ -41,7 +41,7 @@ func (ns *NameSystem) Resolve(ctx context.Context, name string, options ...opts.
 func (ns *NameSystem) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan namesys.Result {
 	status := ns.blocker.IsPathBlocked(path.FromString(name))
 	if err := status.ToError(); err != nil {
-		logger.Error(err.Response)
+		logger.Warn(err.Response)
 		ch := make(chan namesys.Result, 1)
 		ch <- namesys.Result{
 			Path: status.Path,
