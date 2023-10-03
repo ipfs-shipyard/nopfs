@@ -24,6 +24,7 @@ var ErrHeaderNotFound = errors.New("header not found")
 
 const maxHeaderSize = 1 << 20 // 1MiB per the spec
 const maxLineSize = 2 << 20   // 2MiB per the spec
+const currentVersion = 1
 
 // DenylistHeader represents the header of a Denylist file.
 type DenylistHeader struct {
@@ -69,6 +70,13 @@ func (h *DenylistHeader) Decode(r io.Reader) error {
 
 	err := yaml.Unmarshal(h.headerBytes, h)
 	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	// In the future this may need adapting to support several versions.
+	if h.Version > 0 && h.Version != currentVersion {
+		err = errors.New("unsupported denylist version")
 		logger.Error(err)
 		return err
 	}
