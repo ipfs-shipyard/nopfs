@@ -12,30 +12,35 @@ import (
 // $XDG_CONFIG_HOME/ipfs/denylists and /etc/ipfs/denylists.  The files are
 // sortered by their names in their respective folders.
 func GetDenylistFiles() ([]string, error) {
-	var denylistFiles []string
-
 	// First, look for denylists in $XDG_CONFIG_HOME/ipfs/denylists
 	xdgConfigHome := os.Getenv("XDG_CONFIG_HOME")
 	if xdgConfigHome == "" {
 		xdgConfigHome = os.Getenv("HOME") + "/.config"
 	}
 	ipfsDenylistPath := filepath.Join(xdgConfigHome, "ipfs", "denylists")
-	err := filepath.WalkDir(ipfsDenylistPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if !d.IsDir() && filepath.Ext(path) == ".deny" {
-			denylistFiles = append(denylistFiles, path)
-		}
-		return nil
-	})
-	if !os.IsNotExist(err) && err != nil {
-		return nil, fmt.Errorf("error walking %s: %w", ipfsDenylistPath, err)
+	ipfsDenylistFiles, err := GetDenylistFilesInFolder(ipfsDenylistPath)
+	if err != nil {
+		return nil, err
 	}
 
 	// Then, look for denylists in /etc/ipfs/denylists
 	etcDenylistPath := "/etc/ipfs/denylists"
-	err = filepath.WalkDir(etcDenylistPath, func(path string, d fs.DirEntry, err error) error {
+	etcDenylistFiles, err := GetDenylistFilesInFolder(etcDenylistPath)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(ipfsDenylistFiles, etcDenylistFiles...), nil
+}
+
+// GetDenylistFilesInFolder returns a list of ".deny" files found in the given
+// folder. The files are sortered by their names. It returns an empty list and
+// no error if the folder does not exist.
+func GetDenylistFilesInFolder(dirpath string) ([]string, error) {
+	var denylistFiles []string
+
+	// WalkDir outputs files in lexical order.
+	err := filepath.WalkDir(dirpath, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -45,9 +50,8 @@ func GetDenylistFiles() ([]string, error) {
 		return nil
 	})
 	if !os.IsNotExist(err) && err != nil {
-		return nil, fmt.Errorf("error walking %s: %w", etcDenylistPath, err)
+		return nil, fmt.Errorf("error walking %s: %w", dirpath, err)
 	}
-
 	return denylistFiles, nil
 }
 
