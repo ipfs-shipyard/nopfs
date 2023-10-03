@@ -331,6 +331,9 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 	e := Entry{
 		Line:     number,
 		RawValue: line,
+		// Every entry carries the header hints. They will be
+		// overwritten by rule hints below when in conflict.
+		Hints: dl.Header.Hints,
 	}
 
 	// the rule is always field-0. Anything else is hints.
