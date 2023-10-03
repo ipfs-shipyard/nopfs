@@ -22,6 +22,9 @@ import (
 // ErrHeaderNotFound is returned when no header can be Decoded.
 var ErrHeaderNotFound = errors.New("header not found")
 
+const maxHeaderSize = 1 << 20 // 1MiB per the spec
+const maxLineSize = 2 << 20   // 2MiB per the spec
+
 // DenylistHeader represents the header of a Denylist file.
 type DenylistHeader struct {
 	Version     int
@@ -40,7 +43,7 @@ type DenylistHeader struct {
 func (h *DenylistHeader) Decode(r io.Reader) error {
 	limRdr := &io.LimitedReader{
 		R: r,
-		N: 1 << 10, // 1KiB per spec
+		N: maxHeaderSize,
 	}
 	buf := bufio.NewReader(limRdr)
 
@@ -188,7 +191,7 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 	// read-ahead and consume N.
 	limRdr := &io.LimitedReader{
 		R: dl.f,
-		N: 2 << 20, // 2MiB per spec
+		N: maxLineSize,
 	}
 	r := bufio.NewReader(limRdr)
 
@@ -196,7 +199,7 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 	for {
 		line, err := r.ReadString('\n')
 		// limit reader exhausted
-		if err == io.EOF && len(line) >= 2<<20 {
+		if err == io.EOF && len(line) >= maxLineSize {
 			err = fmt.Errorf("line too long. %s:%d", dl.Filename, lineNumber+1)
 			logger.Error(err)
 			dl.Close()
@@ -215,7 +218,7 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 		if err := dl.parseLine(line, lineNumber); err != nil {
 			logger.Error(err)
 		}
-		limRdr.N = 2 << 20 // reset
+		limRdr.N = maxLineSize // reset
 
 	}
 	// we finished reading the file as it EOF'ed.
@@ -257,7 +260,7 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 	// watchers on the folder, but requires a small refactoring.
 	go func() {
 		line := ""
-		limRdr.N = 2 << 20 // reset
+		limRdr.N = maxLineSize // reset
 
 		for {
 			partialLine, err := r.ReadString('\n')
