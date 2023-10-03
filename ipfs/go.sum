@@ -86,8 +86,8 @@ github.com/hashicorp/golang-lru v0.5.4/go.mod h1:iADmTwqILo4mZ8BN3D2Q6+9jd8WM5uG
 github.com/hashicorp/golang-lru/v2 v2.0.5 h1:wW7h1TG88eUIJ2i69gaE3uNVtEPIagzhGvHgwfx2Vm4=
 github.com/hashicorp/golang-lru/v2 v2.0.5/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyfM2/ZepoAG6RGpeM=
 github.com/huin/goupnp v1.2.0 h1:uOKW26NG1hsSSbXIZ1IR7XP9Gjd1U8pnLaCMgntmkmY=
-github.com/ipfs-shipyard/nopfs v0.0.7 h1:zuC9r1fNO4ijxsNFwXXQqQC7uSe9GfTMvThBkMSs4Vs=
-github.com/ipfs-shipyard/nopfs v0.0.7/go.mod h1:zCmxRNQBYwTRYemK6zcKBGLKN9DkDJYNzmNMqw9GtIA=
+github.com/ipfs-shipyard/nopfs v0.0.11 h1:+JrOqVs4Za0eu4jntdAqxoWolWcmtJnTQXxn2Y/Io2E=
+github.com/ipfs-shipyard/nopfs v0.0.11/go.mod h1:zCmxRNQBYwTRYemK6zcKBGLKN9DkDJYNzmNMqw9GtIA=
 github.com/ipfs/bbloom v0.0.4 h1:Gi+8EGJ2y5qiD5FbsbpX/TMNcJw8gSqr7eyjHa4Fhvs=
 github.com/ipfs/bbloom v0.0.4/go.mod h1:cS9YprKXpoZ9lT0n/Mw/a6/aFV6DTjTLYHeA+gyqMG0=
 github.com/ipfs/boxo v0.13.1 h1:nQ5oQzcMZR3oL41REJDcTbrvDvuZh3J9ckc9+ILeRQI=

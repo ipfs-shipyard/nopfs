@@ -39,7 +39,7 @@ func (nbs *BlockService) Close() error {
 // Gets a block unless CID has been blocked.
 func (nbs *BlockService) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
 	if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
-		logger.Error(err)
+		logger.Error(err.Response)
 		return nil, err
 	}
 	return nbs.bs.GetBlock(ctx, c)
@@ -50,7 +50,7 @@ func (nbs *BlockService) GetBlocks(ctx context.Context, ks []cid.Cid) <-chan blo
 	var filtered []cid.Cid
 	for _, c := range ks {
 		if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
-			logger.Error(err)
+			logger.Error(err.Response)
 			logger.Warnf("GetBlocks dropped blocked block: %s", err)
 		} else {
 			filtered = append(filtered, c)
@@ -72,7 +72,7 @@ func (nbs *BlockService) Exchange() exchange.Interface {
 // AddBlock adds a block unless the CID is blocked.
 func (nbs *BlockService) AddBlock(ctx context.Context, o blocks.Block) error {
 	if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
-		logger.Error(err)
+		logger.Error(err.Response)
 		return err
 	}
 	return nbs.bs.AddBlock(ctx, o)
@@ -83,7 +83,7 @@ func (nbs *BlockService) AddBlocks(ctx context.Context, bs []blocks.Block) error
 	var filtered []blocks.Block
 	for _, o := range bs {
 		if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
-			logger.Error(err)
+			logger.Error(err.Response)
 			logger.Warnf("AddBlocks dropped blocked block: %s", err)
 		} else {
 			filtered = append(filtered, o)

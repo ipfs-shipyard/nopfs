@@ -3,7 +3,7 @@ module github.com/ipfs-shipyard/nopfs/ipfs
 go 1.20
 
 require (
-	github.com/ipfs-shipyard/nopfs v0.0.7
+	github.com/ipfs-shipyard/nopfs v0.0.11
 	github.com/ipfs/boxo v0.13.1
 	github.com/ipfs/go-block-format v0.1.2
 	github.com/ipfs/go-cid v0.4.1
