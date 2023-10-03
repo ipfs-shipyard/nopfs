@@ -37,7 +37,6 @@ type Suite struct {
 	TestCID              bool
 	TestCIDPath          bool
 	TestIPNSPath         bool
-	TestMime             bool
 	TestDoubleHashLegacy bool
 	TestDoubleHash       bool
 
@@ -84,12 +83,6 @@ func (s *Suite) Run(b Blocker) error {
 
 	if s.TestIPNSPath {
 		if err := s.testIPNSPath(); err != nil {
-			return err
-		}
-	}
-
-	if s.TestMime {
-		if err := s.testMime(); err != nil {
 			return err
 		}
 	}
@@ -313,29 +306,6 @@ func (s *Suite) testIPNSPath() error {
 	}
 
 	if err := s.testPaths(rule8allowed, n, "rule8", true); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Suite) testMime() error {
-	n := "testMime"
-
-	// rule9
-	rule9 := []string{
-		"/mime/image/jpg",
-		"/mime/image/tiff",
-	}
-	rule9allowed := []string{
-		"/mime/image/gif",
-	}
-
-	if err := s.testPaths(rule9, n, "rule9", false); err != nil {
-		return err
-	}
-
-	if err := s.testPaths(rule9allowed, n, "rule9", true); err != nil {
 		return err
 	}
 

@@ -71,7 +71,6 @@ func TestSuite(t *testing.T) {
 		TestCID:              true,
 		TestCIDPath:          true,
 		TestIPNSPath:         true,
-		TestMime:             false,
 		TestDoubleHashLegacy: true,
 		TestDoubleHash:       true,
 	}

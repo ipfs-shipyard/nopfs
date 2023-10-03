@@ -47,10 +47,6 @@ hints:
 # Block IPNS key - blocks wrapped multihash.
 /ipns/k51qzi5uqu5dhmzyv3zac033i7rl9hkgczxyl81lwoukda2htteop7d3x0y1mf
 
-# Block all mime types with exceptions
-/mime/image/*
-+/mime/image/gif
-
 # Legacy CID double-hash block
 # sha256(bafybeiefwqslmf6zyyrxodaxx4vwqircuxpza5ri45ws3y5a62ypxti42e/)
 # blocks only this CID

@@ -57,10 +57,6 @@ hints:
 # Block IPNS key - blocks wrapped multihash.
 /ipns/k51qzi5uqu5dhmzyv3zac033i7rl9hkgczxyl81lwoukda2htteop7d3x0y1mf
 
-# Block all mime types with exceptions
-/mime/image/*
-+/mime/image/gif
-
 # Legacy CID double-hash block
 # sha256(bafybeiefwqslmf6zyyrxodaxx4vwqircuxpza5ri45ws3y5a62ypxti42e/)
 # blocks only this CID
@@ -139,7 +135,6 @@ This allows using the Blocker separately, or relying on blocking-wrappers separa
   - [x] Content-blocking-enabled IPFS BlockService implementation
   - [x] Content-blocking-enabled IPFS NameSystem implementation
   - [x] Content-blocking-enabled IPFS Path resolver implementation
-  - [ ] Mime-type blocking
   - [x] Kubo plugin
   - [x] Automatic, comprehensive testing of all rule types and edge cases
   - [x] Work with a stable release of Kubo
