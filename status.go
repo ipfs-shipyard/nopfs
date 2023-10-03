@@ -1,6 +1,8 @@
 package nopfs
 
 import (
+	"fmt"
+
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
 )
@@ -42,6 +44,35 @@ type StatusResponse struct {
 	Error    error
 }
 
+// String provides a string with the details of a StatusResponse.
+func (r StatusResponse) String() string {
+	if err := r.Error; err != nil {
+		return err.Error()
+	}
+
+	path := ""
+	if c := r.Cid; c.Defined() {
+		path = c.String()
+	} else {
+		path = r.Path.String()
+	}
+
+	return fmt.Sprintf("%s: %s (%s:%d)",
+		path, r.Status,
+		r.Filename, r.Entry.Line,
+	)
+}
+
+// ToError returns nil if the Status of the StatusResponse is Allowed or Not Found.
+// When the status is Blocked or Errored, it returns a StatusError.
+func (r StatusResponse) ToError() *StatusError {
+	if r.Status != StatusBlocked && r.Status != StatusErrored {
+		return nil
+	}
+
+	return &StatusError{Response: r}
+}
+
 // StatusError implements the error interface and can be used to provide
 // information about a blocked-status in the form of an error.
 type StatusError struct {
@@ -56,14 +87,4 @@ func (err *StatusError) Error() string {
 		return c.String() + " is blocked and cannot be provided"
 	}
 	return err.Response.Path.String() + " is blocked and cannot be provided"
-}
-
-// ToError returns nil if the Status of the StatusResponse is Allowed or Not Found.
-// When the status is Blocked or Errored, it returns a StatusError.
-func (r StatusResponse) ToError() *StatusError {
-	if r.Status != StatusBlocked && r.Status != StatusErrored {
-		return nil
-	}
-
-	return &StatusError{Response: r}
 }

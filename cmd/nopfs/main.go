@@ -72,7 +72,7 @@ func main() {
 				fmt.Println(err)
 			} else {
 				status := blocker.IsCidBlocked(c)
-				fmt.Printf("%s: line %d. %s\n", status.Status, status.Entry.Line, status.Entry)
+				fmt.Println(status)
 			}
 		default:
 			fmt.Println("Usage:")
