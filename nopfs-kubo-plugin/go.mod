@@ -6,8 +6,8 @@ go 1.20
 retract [v0.21.0-rc1-test10, v0.21.0-rc1-test999]
 
 require (
-	github.com/ipfs-shipyard/nopfs v0.0.8
-	github.com/ipfs-shipyard/nopfs/ipfs v0.13.1
+	github.com/ipfs-shipyard/nopfs v0.0.11
+	github.com/ipfs-shipyard/nopfs/ipfs v0.13.1-4
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/ipfs/kubo v0.23.0
 	go.uber.org/fx v1.20.0
