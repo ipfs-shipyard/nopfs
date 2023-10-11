@@ -29,7 +29,7 @@ func WrapResolver(res resolver.Resolver, blocker *nopfs.Blocker) resolver.Resolv
 }
 
 // ResolveToLastNode checks if the given path is blocked before resolving.
-func (res *Resolver) ResolveToLastNode(ctx context.Context, fpath path.Path) (cid.Cid, []string, error) {
+func (res *Resolver) ResolveToLastNode(ctx context.Context, fpath path.ImmutablePath) (cid.Cid, []string, error) {
 	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
 		logger.Warn(err.Response)
 		return cid.Undef, nil, err
@@ -38,7 +38,7 @@ func (res *Resolver) ResolveToLastNode(ctx context.Context, fpath path.Path) (ci
 }
 
 // ResolvePath checks if the given path is blocked before resolving.
-func (res *Resolver) ResolvePath(ctx context.Context, fpath path.Path) (ipld.Node, ipld.Link, error) {
+func (res *Resolver) ResolvePath(ctx context.Context, fpath path.ImmutablePath) (ipld.Node, ipld.Link, error) {
 	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
 		logger.Warn(err.Response)
 		return nil, nil, err
@@ -47,7 +47,7 @@ func (res *Resolver) ResolvePath(ctx context.Context, fpath path.Path) (ipld.Nod
 }
 
 // ResolvePathComponents checks if the given path is blocked before resolving.
-func (res *Resolver) ResolvePathComponents(ctx context.Context, fpath path.Path) ([]ipld.Node, error) {
+func (res *Resolver) ResolvePathComponents(ctx context.Context, fpath path.ImmutablePath) ([]ipld.Node, error) {
 	if err := res.blocker.IsPathBlocked(fpath).ToError(); err != nil {
 		logger.Warn(err.Response)
 		return nil, err
