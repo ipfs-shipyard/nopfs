@@ -154,7 +154,11 @@ func (s *Suite) testCID() error {
 
 func (s *Suite) testPaths(paths []string, testName, testRule string, allow bool) error {
 	for _, p := range paths {
-		blocked := s.b.IsPathBlocked(path.FromString(p))
+		ppath, err := path.NewPath(p)
+		if err != nil {
+			return err
+		}
+		blocked := s.b.IsPathBlocked(ppath)
 		if !blocked && !allow {
 			return fmt.Errorf("%s: path %s should be blocked (%s)", testName, p, testRule)
 		}
@@ -191,6 +195,7 @@ func (s *Suite) testCIDPath() error {
 		"/ipfs/QmdWFA9FL52hx3j9EJZPQP1ZUH8Ygi5tLCX2cRDs6knSf8",
 		"/ipfs/QmdWFA9FL52hx3j9EJZPQP1ZUH8Ygi5tLCX2cRDs6knSf8/a/b",
 		"/ipfs/QmdWFA9FL52hx3j9EJZPQP1ZUH8Ygi5tLCX2cRDs6knSf8/z/",
+		"/ipfs/QmdWFA9FL52hx3j9EJZPQP1ZUH8Ygi5tLCX2cRDs6knSf8/z",
 	}
 	if err := s.testPaths(rule2, n, "rule2", false); err != nil {
 		return err
