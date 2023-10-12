@@ -64,8 +64,13 @@ func main() {
 		}
 		switch typ {
 		case "p":
-			status := blocker.IsPathBlocked(path.FromString(elem))
-			fmt.Printf("%s: %s\n", status.Status, status.Entry)
+			p, err := path.NewPath(elem)
+			if err != nil {
+				fmt.Printf("error parsing path: %s\n", err)
+			} else {
+				status := blocker.IsPathBlocked(p)
+				fmt.Printf("%s: %s\n", status.Status, status.Entry)
+			}
 		case "c":
 			c, err := cid.Decode(elem)
 			if err != nil {

@@ -497,7 +497,8 @@ func (dl *Denylist) Close() error {
 
 // IsSubpathBlocked returns Blocking Status for the given subpath.
 func (dl *Denylist) IsSubpathBlocked(subpath string) StatusResponse {
-	subpath = strings.TrimPrefix(subpath, "/")
+	// all "/" prefix and suffix trimming is done in BlockedPath.Matches.
+	// every rule has been ingested without slashes on the ends
 
 	logger.Debugf("IsSubpathBlocked load path: %s", subpath)
 	pathBlockEntries, _ := dl.PathBlocksDB.Load(subpath)
@@ -526,10 +527,17 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	subpath = strings.TrimPrefix(subpath, "/")
 
 	var p path.Path
+	var err error
 	if len(subpath) > 0 {
-		p = path.FromString("/ipns/" + name + "/" + subpath)
+		p, err = path.NewPath("/ipns/" + name + "/" + subpath)
 	} else {
-		p = path.FromString("/ipns/" + name)
+		p, err = path.NewPath("/ipns/" + name)
+	}
+	if err != nil {
+		return StatusResponse{
+			Status: StatusErrored,
+			Error:  err,
+		}
 	}
 	key := name
 	// Check if it is a CID and use the multihash as key then
@@ -551,7 +559,7 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 
 	// Double-hash blocking
 	for codec, blocks := range dl.DoubleHashBlocksDB {
-		double, err := multihash.Sum([]byte(p), codec, -1)
+		double, err := multihash.Sum([]byte(p.String()), codec, -1)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -594,11 +602,20 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	subpath = strings.TrimPrefix(subpath, "/")
 
 	var p path.Path
+	var err error
 	if len(subpath) > 0 {
-		p = path.FromString("/" + protocol + "/" + cidStr + "/" + subpath)
+		p, err = path.NewPath("/" + protocol + "/" + cidStr + "/" + subpath)
 	} else {
-		p = path.FromString("/" + protocol + "/" + cidStr)
+		p, err = path.NewPath("/" + protocol + "/" + cidStr)
 	}
+
+	if err != nil {
+		return StatusResponse{
+			Status: StatusErrored,
+			Error:  err,
+		}
+	}
+
 	key := cidStr
 
 	// This could be a shortcut to let the work to the
@@ -611,7 +628,6 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	// }
 
 	var c cid.Cid
-	var err error
 	if len(key) != 46 || key[:2] != "Qm" {
 		// Key is not a CIDv0, we need to convert other CIDs.
 		// convert to Multihash (cidV0)
@@ -738,7 +754,7 @@ func (dl *Denylist) IsPathBlocked(p path.Path) StatusResponse {
 	}
 	proto := segments[0]
 	key := segments[1]
-	subpath := path.Join(segments[2:])
+	subpath := strings.Join(segments[2:], "/")
 
 	// First, check that we are not blocking this subpath in general
 	if len(subpath) > 0 {
@@ -746,7 +762,6 @@ func (dl *Denylist) IsPathBlocked(p path.Path) StatusResponse {
 			resp.Path = p
 			return resp
 		}
-
 	}
 
 	// Second, check that we are not blocking ipfs or ipns paths
