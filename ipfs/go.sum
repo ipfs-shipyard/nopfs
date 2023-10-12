@@ -88,10 +88,14 @@ github.com/hashicorp/golang-lru/v2 v2.0.5/go.mod h1:QeFd9opnmA6QUJc5vARoKUSoFhyf
 github.com/huin/goupnp v1.2.0 h1:uOKW26NG1hsSSbXIZ1IR7XP9Gjd1U8pnLaCMgntmkmY=
 github.com/ipfs-shipyard/nopfs v0.0.11 h1:+JrOqVs4Za0eu4jntdAqxoWolWcmtJnTQXxn2Y/Io2E=
 github.com/ipfs-shipyard/nopfs v0.0.11/go.mod h1:zCmxRNQBYwTRYemK6zcKBGLKN9DkDJYNzmNMqw9GtIA=
+github.com/ipfs-shipyard/nopfs v0.0.12-0.20231012170252-ab19c8a36941 h1:IkOu07ym9Pi+O5Xl50CpMjvqULLFatzNY3+dyI54swM=
+github.com/ipfs-shipyard/nopfs v0.0.12-0.20231012170252-ab19c8a36941/go.mod h1:kuVnRVtaUO33/H05F/TH0pia1Pr/VW3DrFRGZGP4bpg=
 github.com/ipfs/bbloom v0.0.4 h1:Gi+8EGJ2y5qiD5FbsbpX/TMNcJw8gSqr7eyjHa4Fhvs=
 github.com/ipfs/bbloom v0.0.4/go.mod h1:cS9YprKXpoZ9lT0n/Mw/a6/aFV6DTjTLYHeA+gyqMG0=
 github.com/ipfs/boxo v0.13.1 h1:nQ5oQzcMZR3oL41REJDcTbrvDvuZh3J9ckc9+ILeRQI=
 github.com/ipfs/boxo v0.13.1/go.mod h1:btrtHy0lmO1ODMECbbEY1pxNtrLilvKSYLoGQt1yYCk=
+github.com/ipfs/boxo v0.13.2-0.20231012132507-6602207a8fa3 h1:sgrhALL6mBoZsNvJ2zUcITcN6IW3y14ej6w7gv5RcOI=
+github.com/ipfs/boxo v0.13.2-0.20231012132507-6602207a8fa3/go.mod h1:btrtHy0lmO1ODMECbbEY1pxNtrLilvKSYLoGQt1yYCk=
 github.com/ipfs/go-bitfield v1.1.0 h1:fh7FIo8bSwaJEh6DdTWbCeZ1eqOaOkKFI74SCnsWbGA=
 github.com/ipfs/go-block-format v0.1.2 h1:GAjkfhVx1f4YTODS6Esrj1wt2HhrtwTnhEr+DyPUaJo=
 github.com/ipfs/go-block-format v0.1.2/go.mod h1:mACVcrxarQKstUU3Yf/RdwbC4DzPV6++rO2a3d+a/KE=
