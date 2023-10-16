@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Subscriber represents a type that subscribes to a remote URL and appends data to a local file.
+// HTTPSubscriber represents a type that subscribes to a remote URL and appends data to a local file.
 type HTTPSubscriber struct {
 	RemoteURL   string
 	LocalFile   string
@@ -16,7 +16,7 @@ type HTTPSubscriber struct {
 	stopChannel chan struct{}
 }
 
-// NewSubscriber creates a new Subscriber instance with the given parameters.
+// NewHTTPSubscriber creates a new Subscriber instance with the given parameters.
 func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) *HTTPSubscriber {
 	return &HTTPSubscriber{
 		RemoteURL:   remoteURL,
