@@ -82,6 +82,22 @@ hints:
 //QmbK7LDv5NNBvYQzNfm2eED17SNLt1yNMapcUhSuNLgkqz
 ```
 
+You can create double-hashes by hand with the following command:
+
+```
+printf "QmecDgNqCRirkc3Cjz9eoRBNwXGckJ9WvTdmY16HP88768/my/path" \
+  | ipfs add --raw-leaves --only-hash --quiet \
+  | ipfs cid format -f '%M' -b base58btc
+```
+
+where:
+  - `QmecDgNqCRirkc3Cjz9eoRBNwXGckJ9WvTdmY16HP88768` must always be a
+    CidV0. If you have a CIDv1 you need to convert it to CIDv0 first. i.e
+	`ipfs cid format -v0 bafybeihrw75yfhdx5qsqgesdnxejtjybscwuclpusvxkuttep6h7pkgmze`
+  - `/my/path` is optional depending on whether you want to block a specific path. No wildcards supported here!
+  - The command above should give `QmSju6XPmYLG611rmK7rEeCMFVuL6EHpqyvmEU6oGx3GR8`. Use it as `//QmSju6XPmYLG611rmK7rEeCMFVuL6EHpqyvmEU6oGx3GR8` on the denylist.
+
+
 ## Kubo plugin
 
 NOpfs Kubo plugin pre-built binary releases are available in the
