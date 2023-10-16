@@ -22,7 +22,7 @@ func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) *HTT
 		RemoteURL:   remoteURL,
 		LocalFile:   localFile,
 		Interval:    interval,
-		stopChannel: make(chan struct{}),
+		stopChannel: make(chan struct{}, 1),
 	}
 }
 
