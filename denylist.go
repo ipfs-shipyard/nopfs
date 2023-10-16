@@ -194,41 +194,21 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 		return err
 	}
 
-	// we will update N as we go after every line.
-	// Fixme: this is going to play weird as the buffered reader will
-	// read-ahead and consume N.
+	// we will update N as we go after every line.  Fixme: this is
+	// going to play weird as the buffered reader will read-ahead
+	// and consume N.
 	limRdr := &io.LimitedReader{
 		R: dl.f,
 		N: maxLineSize,
 	}
 	r := bufio.NewReader(limRdr)
-
 	lineNumber := dl.Header.headerLines
-	for {
-		line, err := r.ReadString('\n')
-		// limit reader exhausted
-		if err == io.EOF && len(line) >= maxLineSize {
-			err = fmt.Errorf("line too long. %s:%d", dl.Filename, lineNumber+1)
-			logger.Error(err)
-			dl.Close()
-			return err
-		}
-		// keep waiting for data
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			logger.Error(err)
-			return err
-		}
 
-		lineNumber++
-		if err := dl.parseLine(line, lineNumber); err != nil {
-			logger.Error(err)
-		}
-		limRdr.N = maxLineSize // reset
-
+	lineNumber, err := dl.readLines(r, limRdr, lineNumber)
+	if err != nil {
+		return err
 	}
+
 	// we finished reading the file as it EOF'ed.
 	if !follow {
 		return nil
@@ -261,55 +241,97 @@ func (dl *Denylist) parseAndFollow(follow bool) error {
 		}
 	}
 
-	// Is this the right way of tailing a file? Pretty sure there are a
-	// bunch of gotchas. It seems to work when saving on top of a file
-	// though. Also, important that the limitedReader is there to avoid
-	// parsing a huge lines.  Also, this could be done by just having
-	// watchers on the folder, but requires a small refactoring.
-	go func() {
-		line := ""
+	go dl.followLines(r, limRdr, lineNumber, waitForWrite)
+	return nil
+}
+
+// readLines reads lines from a buffered reader on top of a limited reader,
+// that we reset on every line. This enforces line-length limits.
+func (dl *Denylist) readLines(r *bufio.Reader, limRdr *io.LimitedReader, lineNumber uint64) (uint64, error) {
+	for {
+		line, err := r.ReadString('\n')
+		// limit reader exhausted
+		if err == io.EOF && len(line) >= maxLineSize {
+			err = fmt.Errorf("line too long. %s:%d", dl.Filename, lineNumber+1)
+			logger.Error(err)
+			dl.Close()
+			return lineNumber, err
+		}
+		// keep waiting for data
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			logger.Error(err)
+			return lineNumber, err
+		}
+
+		lineNumber++
+		if err := dl.parseLine(line, lineNumber); err != nil {
+			logger.Error(err)
+		}
 		limRdr.N = maxLineSize // reset
 
-		for {
-			partialLine, err := r.ReadString('\n')
-			line += partialLine
+	}
+	return lineNumber, nil
+}
 
-			// limit reader exhausted
-			if err == io.EOF && limRdr.N == 0 {
-				err = fmt.Errorf("line too long. %s:%d", dl.Filename, lineNumber+1)
-				logger.Error(err)
-				dl.Close()
-				return
-			}
-			// keep waiting for data
-			if err == io.EOF {
-				err := waitForWrite()
-				if err != nil {
-					logger.Error(err)
-					dl.Close()
-					return
-				}
-				continue
-			}
+// Follow lines keeps reading lines as we get notified that there are new
+// writes to the file.
+// Is this the right way of tailing a file? Pretty sure there are a
+// bunch of gotchas. It seems to work when saving on top of a file
+// though. Also, important that the limitedReader is there to avoid
+// parsing a huge lines.  Also, this could be done by just having
+// watchers on the folder, but requires a small refactoring.
+func (dl *Denylist) followLines(r *bufio.Reader, limRdr *io.LimitedReader, lineNumber uint64, waitWrite func() error) {
+	line := ""
+	limRdr.N = maxLineSize // reset
+
+	for {
+		partialLine, err := r.ReadString('\n')
+
+		// limit reader exhausted
+		if err == io.EOF && limRdr.N == 0 {
+			err = fmt.Errorf("line too long. %s:%d", dl.Filename, lineNumber+1)
+			logger.Error(err)
+			dl.Close()
+			return
+		}
+
+		// Record how much of a line we have
+		line += partialLine
+
+		// keep waiting for data
+		if err == io.EOF {
+			// We read a full line or nothing and are waiting.
+			err := waitWrite()
 			if err != nil {
 				logger.Error(err)
 				dl.Close()
 				return
 			}
-
-			lineNumber++
-			// we have read up to \n
-			if err := dl.parseLine(line, lineNumber); err != nil {
-				logger.Error(err)
-				// log error and continue with next line
-
-			}
-			// reset for next line
-			line = ""
-			limRdr.N = 2 << 20 // reset
+			continue
 		}
-	}()
-	return nil
+		if err != nil {
+			logger.Error(err)
+			dl.Close()
+			return
+		}
+
+		// if we are here, no EOF, no error and ReadString()
+		// found an \n so we have a full line.
+
+		lineNumber++
+		// we have read up to \n
+		if err := dl.parseLine(line, lineNumber); err != nil {
+			logger.Error(err)
+			// log error and continue with next line
+
+		}
+		// reset for next line
+		line = ""
+		limRdr.N = 2 << 20 // reset
+	}
 }
 
 // parseLine processes every full-line read and puts it into the BlocksDB etc.
