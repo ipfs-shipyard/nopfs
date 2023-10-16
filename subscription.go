@@ -89,7 +89,7 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 	case (resp.StatusCode >= http.StatusBadRequest &&
 		resp.StatusCode != http.StatusRequestedRangeNotSatisfiable) ||
 		resp.StatusCode >= http.StatusInternalServerError:
-		logger.Errorf("%s: server returned with unexpected code %s", resp.StatusCode)
+		logger.Errorf("%s: server returned with unexpected code %d", s.LocalFile, resp.StatusCode)
 		// error is ignored, we continued subscribed
 	}
 }
