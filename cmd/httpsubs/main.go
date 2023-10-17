@@ -20,7 +20,11 @@ func main() {
 
 	fmt.Printf("%s: subscribed to %s. CTRL-C to stop\n", local, remote)
 
-	subscriber := nopfs.NewHTTPSubscriber(remote, local, 1*time.Minute)
+	subscriber, err := nopfs.NewHTTPSubscriber(remote, local, 1*time.Minute)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 	go subscriber.Subscribe()
 
 	c := make(chan os.Signal, 1)

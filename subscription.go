@@ -10,9 +10,9 @@ import (
 
 // HTTPSubscriber represents a type that subscribes to a remote URL and appends data to a local file.
 type HTTPSubscriber struct {
-	RemoteURL   string
-	LocalFile   string
-	Interval    time.Duration
+	remoteURL   string
+	localFile   string
+	interval    time.Duration
 	stopChannel chan struct{}
 }
 
@@ -26,9 +26,9 @@ func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) (*HT
 	defer f.Close()
 
 	return &HTTPSubscriber{
-		RemoteURL:   remoteURL,
-		LocalFile:   localFile,
-		Interval:    interval,
+		remoteURL:   remoteURL,
+		localFile:   localFile,
+		interval:    interval,
 		stopChannel: make(chan struct{}, 1),
 	}, nil
 }
@@ -40,13 +40,14 @@ func (s *HTTPSubscriber) Subscribe() {
 	for {
 		select {
 		case <-s.stopChannel:
+			logger.Infof("Stopping subscription on: %s", s.localFile)
 			if !timer.Stop() {
 				<-timer.C
 			}
 			return
 		case <-timer.C:
 			s.downloadAndAppend()
-			timer.Reset(s.Interval)
+			timer.Reset(s.interval)
 		}
 	}
 }
@@ -57,7 +58,7 @@ func (s *HTTPSubscriber) Stop() {
 }
 
 func (s *HTTPSubscriber) downloadAndAppend() {
-	localFile, err := os.OpenFile(s.LocalFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	localFile, err := os.OpenFile(s.localFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -72,7 +73,7 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 	localFileSize := localFileInfo.Size()
 
 	// Create a HTTP GET request with the Range header to download only the missing bytes
-	req, err := http.NewRequest("GET", s.RemoteURL, nil)
+	req, err := http.NewRequest("GET", s.remoteURL, nil)
 	if err != nil {
 		logger.Error(err)
 	}
@@ -92,11 +93,11 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 		if err != nil {
 			logger.Error(err)
 		}
-		logger.Infof("%s: appended %d bytes", s.LocalFile, resp.ContentLength)
+		logger.Infof("%s: appended %d bytes", s.localFile, resp.ContentLength)
 	case (resp.StatusCode >= http.StatusBadRequest &&
 		resp.StatusCode != http.StatusRequestedRangeNotSatisfiable) ||
 		resp.StatusCode >= http.StatusInternalServerError:
-		logger.Errorf("%s: server returned with unexpected code %d", s.LocalFile, resp.StatusCode)
+		logger.Errorf("%s: server returned with unexpected code %d", s.localFile, resp.StatusCode)
 		// error is ignored, we continued subscribed
 	}
 }
