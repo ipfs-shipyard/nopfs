@@ -25,7 +25,6 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
-	go subscriber.Subscribe()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

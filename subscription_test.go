@@ -70,7 +70,6 @@ func TestHTTPSubscriber(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	go subscriber.Subscribe()
 
 	// Allow some time for subscription to run
 	time.Sleep(2 * time.Second)

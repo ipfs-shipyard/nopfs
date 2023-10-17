@@ -43,11 +43,13 @@ func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) (*HT
 		return nil, err
 	}
 
+	go sub.subscribe()
+
 	return &sub, nil
 }
 
-// Subscribe starts the subscription process.
-func (s *HTTPSubscriber) Subscribe() {
+// subscribe starts the subscription process.
+func (s *HTTPSubscriber) subscribe() {
 	timer := time.NewTimer(0)
 
 	for {
