@@ -70,7 +70,7 @@ func (s *HTTPSubscriber) Subscribe() {
 
 // Stop stops the subscription process.
 func (s *HTTPSubscriber) Stop() {
-	s.stopChannel <- struct{}{}
+	close(s.stopChannel)
 }
 
 func (s *HTTPSubscriber) downloadAndAppend() error {
@@ -96,6 +96,8 @@ func (s *HTTPSubscriber) downloadAndAppend() error {
 
 	rangeHeader := fmt.Sprintf("bytes=%d-", localFileSize)
 	req.Header.Set("Range", rangeHeader)
+
+	logger.Debug("%s: requesting bytes from %d: %s", s.localFile, localFileSize, req.URL)
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
