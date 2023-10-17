@@ -66,7 +66,10 @@ func TestHTTPSubscriber(t *testing.T) {
 	localFile := "test-local-file.txt"
 	defer os.Remove(localFile)
 
-	subscriber := NewHTTPSubscriber(remoteServer.URL, localFile, 500*time.Millisecond)
+	subscriber, err := NewHTTPSubscriber(remoteServer.URL, localFile, 500*time.Millisecond)
+	if err != nil {
+		t.Fatal(err)
+	}
 	go subscriber.Subscribe()
 
 	// Allow some time for subscription to run

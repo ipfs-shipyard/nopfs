@@ -39,8 +39,7 @@ func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) (*HT
 		if err != nil {
 			return nil, err
 		}
-	}
-	if err != nil {
+	} else if err != nil {
 		return nil, err
 	}
 
