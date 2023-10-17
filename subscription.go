@@ -1,8 +1,10 @@
 package nopfs
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"time"
@@ -19,18 +21,30 @@ type HTTPSubscriber struct {
 // NewHTTPSubscriber creates a new Subscriber instance with the given parameters.
 func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) (*HTTPSubscriber, error) {
 	logger.Infof("Subscribing to remote denylist: %s", remoteURL)
-	f, err := os.OpenFile(localFile, os.O_CREATE, 0644)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
 
-	return &HTTPSubscriber{
+	sub := HTTPSubscriber{
 		remoteURL:   remoteURL,
 		localFile:   localFile,
 		interval:    interval,
 		stopChannel: make(chan struct{}, 1),
-	}, nil
+	}
+
+	_, err := os.Stat(localFile)
+	// if not found, we perform a first sync before returning.
+	// this is necessary as otherwise the Blocker does not find much
+	// of the file
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		logger.Infof("Performing first sync on: %s", localFile)
+		err := sub.downloadAndAppend()
+		if err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return &sub, nil
 }
 
 // Subscribe starts the subscription process.
@@ -46,7 +60,10 @@ func (s *HTTPSubscriber) Subscribe() {
 			}
 			return
 		case <-timer.C:
-			s.downloadAndAppend()
+			err := s.downloadAndAppend()
+			if err != nil {
+				logger.Error(err)
+			}
 			timer.Reset(s.interval)
 		}
 	}
@@ -57,17 +74,17 @@ func (s *HTTPSubscriber) Stop() {
 	s.stopChannel <- struct{}{}
 }
 
-func (s *HTTPSubscriber) downloadAndAppend() {
+func (s *HTTPSubscriber) downloadAndAppend() error {
 	localFile, err := os.OpenFile(s.localFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		logger.Error(err)
+		return err
 	}
 	defer localFile.Close()
 
 	// Get the file size of the local file
 	localFileInfo, err := localFile.Stat()
 	if err != nil {
-		logger.Error(err)
+		return err
 	}
 
 	localFileSize := localFileInfo.Size()
@@ -75,7 +92,7 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 	// Create a HTTP GET request with the Range header to download only the missing bytes
 	req, err := http.NewRequest("GET", s.remoteURL, nil)
 	if err != nil {
-		logger.Error(err)
+		return err
 	}
 
 	rangeHeader := fmt.Sprintf("bytes=%d-", localFileSize)
@@ -83,7 +100,7 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		logger.Error(err)
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -91,13 +108,14 @@ func (s *HTTPSubscriber) downloadAndAppend() {
 	case resp.StatusCode == http.StatusPartialContent:
 		_, err = io.Copy(localFile, resp.Body)
 		if err != nil {
-			logger.Error(err)
+			return err
 		}
 		logger.Infof("%s: appended %d bytes", s.localFile, resp.ContentLength)
 	case (resp.StatusCode >= http.StatusBadRequest &&
 		resp.StatusCode != http.StatusRequestedRangeNotSatisfiable) ||
 		resp.StatusCode >= http.StatusInternalServerError:
-		logger.Errorf("%s: server returned with unexpected code %d", s.localFile, resp.StatusCode)
+		return fmt.Errorf("%s: server returned with unexpected code %d", s.localFile, resp.StatusCode)
 		// error is ignored, we continued subscribed
 	}
+	return nil
 }
