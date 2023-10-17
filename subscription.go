@@ -17,13 +17,20 @@ type HTTPSubscriber struct {
 }
 
 // NewHTTPSubscriber creates a new Subscriber instance with the given parameters.
-func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) *HTTPSubscriber {
+func NewHTTPSubscriber(remoteURL, localFile string, interval time.Duration) (*HTTPSubscriber, error) {
+	logger.Infof("Subscribing to remote denylist: %s", remoteURL)
+	f, err := os.OpenFile(localFile, os.O_CREATE, 0644)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
 	return &HTTPSubscriber{
 		RemoteURL:   remoteURL,
 		LocalFile:   localFile,
 		Interval:    interval,
 		stopChannel: make(chan struct{}, 1),
-	}
+	}, nil
 }
 
 // Subscribe starts the subscription process.
