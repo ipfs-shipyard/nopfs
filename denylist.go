@@ -300,7 +300,6 @@ func (dl *Denylist) followLines(r *bufio.Reader, limRdr *io.LimitedReader, lineN
 		line = ""
 		limRdr.N = maxLineSize // reset
 	}
-	return nil
 }
 
 // parseLine processes every full-line read and puts it into the BlocksDB etc.
