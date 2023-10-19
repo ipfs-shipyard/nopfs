@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/ipfs-shipyard/nopfs"
-	opts "github.com/ipfs/boxo/coreiface/options/namesys"
 	"github.com/ipfs/boxo/namesys"
 	"github.com/ipfs/boxo/path"
 	crypto "github.com/libp2p/go-libp2p/core/crypto"
@@ -29,35 +28,21 @@ func WrapNameSystem(ns namesys.NameSystem, blocker *nopfs.Blocker) namesys.NameS
 }
 
 // Resolve resolves an IPNS name unless it is blocked.
-func (ns *NameSystem) Resolve(ctx context.Context, name string, options ...opts.ResolveOpt) (path.Path, error) {
-	p, err := path.NewPath(name)
-	if err != nil {
-		return nil, err
-	}
+func (ns *NameSystem) Resolve(ctx context.Context, p path.Path, options ...namesys.ResolveOption) (namesys.Result, error) {
 	if err := ns.blocker.IsPathBlocked(p).ToError(); err != nil {
 		logger.Warn(err.Response)
-		return nil, err
+		return namesys.Result{}, err
 	}
-	return ns.ns.Resolve(ctx, name, options...)
+	return ns.ns.Resolve(ctx, p, options...)
 }
 
 // ResolveAsync resolves an IPNS name asynchronously unless it is blocked.
-func (ns *NameSystem) ResolveAsync(ctx context.Context, name string, options ...opts.ResolveOpt) <-chan namesys.Result {
-	p, err := path.NewPath(name)
-	if err != nil {
-		ch := make(chan namesys.Result, 1)
-		ch <- namesys.Result{
-			Path: nil,
-			Err:  err,
-		}
-		close(ch)
-		return ch
-	}
+func (ns *NameSystem) ResolveAsync(ctx context.Context, p path.Path, options ...namesys.ResolveOption) <-chan namesys.AsyncResult {
 	status := ns.blocker.IsPathBlocked(p)
 	if err := status.ToError(); err != nil {
 		logger.Warn(err.Response)
-		ch := make(chan namesys.Result, 1)
-		ch <- namesys.Result{
+		ch := make(chan namesys.AsyncResult, 1)
+		ch <- namesys.AsyncResult{
 			Path: status.Path,
 			Err:  err,
 		}
@@ -65,10 +50,10 @@ func (ns *NameSystem) ResolveAsync(ctx context.Context, name string, options ...
 		return ch
 	}
 
-	return ns.ns.ResolveAsync(ctx, name, options...)
+	return ns.ns.ResolveAsync(ctx, p, options...)
 }
 
 // Publish publishes an IPNS record.
-func (ns *NameSystem) Publish(ctx context.Context, name crypto.PrivKey, value path.Path, options ...opts.PublishOption) error {
+func (ns *NameSystem) Publish(ctx context.Context, name crypto.PrivKey, value path.Path, options ...namesys.PublishOption) error {
 	return ns.ns.Publish(ctx, name, value, options...)
 }

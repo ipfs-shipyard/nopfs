@@ -1,4 +1,12 @@
-# nopfs-kubo-plugin
+# nopfs-kubo-plugin (for Kubo <=0.23)
+
+> ### ℹ️ Kubo 0.24 shipped with this plugin built-in
+>
+> It now lives at [ipfs/kubo/plugin/plugins/nopfs](https://github.com/ipfs/kubo/tree/master/plugin/plugins/nopfs)
+>
+> This version will no longer be maintained.
+>
+> Learn more at [`kubo/docs/content-blocking.md`](https://github.com/ipfs/kubo/blob/master/docs/content-blocking.md)
 
 ## Installation
 
