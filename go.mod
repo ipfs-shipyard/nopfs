@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/fsnotify/fsnotify v1.6.0
-	github.com/ipfs/boxo v0.13.2-0.20231012132507-6602207a8fa3
+	github.com/ipfs/boxo v0.13.2-0.20231019090647-a7e134e54ff9
 	github.com/ipfs/go-cid v0.4.1
 	github.com/ipfs/go-log/v2 v2.5.1
 	github.com/multiformats/go-multicodec v0.9.0
