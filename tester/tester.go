@@ -265,10 +265,12 @@ func (s *Suite) testIPNSPath() error {
 	// rule6
 	rule6 := []string{
 		"/ipns/domain.example",
+		"/ipns/domain-example",
 	}
 	rule6allowed := []string{
 		"/ipns/domainaefa.example",
 		"/ipns/domain.example/path",
+		"/ipns/domain--example",
 	}
 
 	if err := s.testPaths(rule6, n, "rule6", false); err != nil {

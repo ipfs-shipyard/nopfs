@@ -511,6 +511,31 @@ func (dl *Denylist) IsSubpathBlocked(subpath string) StatusResponse {
 	}
 }
 
+func toDNSLinkFQDN(label string) string {
+	var result strings.Builder
+	for i := 0; i < len(label); i++ {
+		char := rune(label[i])
+		nextChar := rune(0)
+		if i < len(label)-1 {
+			nextChar = rune(label[i+1])
+		}
+
+		if char == '-' && nextChar == '-' {
+			result.WriteRune('-')
+			i++
+			continue
+		}
+
+		if char == '-' {
+			result.WriteRune('.')
+			continue
+		}
+
+		result.WriteRune(char)
+	}
+	return result.String()
+}
+
 // IsIPNSPathBlocked returns Blocking Status for a given IPNS name and its
 // subpath. The name is NOT an "/ipns/name" path, but just the name.
 func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
@@ -534,6 +559,11 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	c, err := cid.Decode(key)
 	if err == nil {
 		key = c.Hash().B58String()
+	} else if !strings.ContainsRune(key, '.') {
+		// not a CID. It must be a ipns-dnslink name if it does not
+		// contain ".", maybe they got replaced by "-"
+		// https://specs.ipfs.tech/http-gateways/subdomain-gateway/#host-request-header
+		key = toDNSLinkFQDN(key)
 	}
 	logger.Debugf("IsIPNSPathBlocked load: %s %s", key, subpath)
 	entries, _ := dl.IPNSBlocksDB.Load(key)
