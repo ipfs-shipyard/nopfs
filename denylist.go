@@ -371,18 +371,19 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 		// It can be a Multihash (CIDv0) or a sha256-hex-encoded string.
 
 		var mhType uint64
-		// attempt to parse CID
+		// attempt to parse a b58btc-encoded multihash
 		rule = strings.TrimPrefix(rule, "//")
-		c, err := cid.Decode(rule)
+		mh, err := multihash.FromB58String(rule)
 		if err == nil {
-			prefix := c.Prefix()
-			if prefix.Version != 0 {
-				return fmt.Errorf("double-hash is not a raw-multihash (cidv0) (%s:%d)", dl.Filename, number)
+			dmh, err := multihash.Decode(mh)
+			if err != nil {
+				return fmt.Errorf("what appears to be a multihash b58 string cannot be decoded (%s:%d): %w", dl.Filename, number, err)
 			}
-			e.Multihash = c.Hash()
+
+			e.Multihash = mh
 			// we use the multihash codec to group double-hashes
 			// with the same hashing function.
-			mhType = c.Prefix().MhType
+			mhType = dmh.Code
 		} else { // Assume a hex-encoded sha256 string
 			bs, err := hex.DecodeString(rule)
 			if err != nil {
