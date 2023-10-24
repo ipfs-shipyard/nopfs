@@ -133,22 +133,34 @@ hints:
 
 func (s *Suite) testCID() error {
 	// rule1
-	c1 := cid.MustParse("bafybeihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq")
-	c2 := cid.MustParse("bafkreihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq")
-	c3 := cid.MustParse("QmesfgDQ3q6prBy2Kg2gKbW4MAGuWiRP2DVuGA5MZSERLo")
-
-	if !s.b.IsCidBlocked(c1) {
-		return errors.New("testCID: c1 should be blocked (rule1)")
+	blockedCids := []cid.Cid{
+		cid.MustParse("bafybeihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq"),
+		cid.MustParse("bafkreihvvulpp4evxj7x7armbqcyg6uezzuig6jp3lktpbovlqfkuqeuoq"),
+		cid.MustParse("QmesfgDQ3q6prBy2Kg2gKbW4MAGuWiRP2DVuGA5MZSERLo"),
 	}
 
-	if !s.b.IsCidBlocked(c2) {
-		return errors.New("testCID: c2 should be blocked (rule1)")
+	// rule14
+	allowCids := []cid.Cid{
+		cid.MustParse("QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"),
+		cid.MustParse("bafyaabakaieac"),
+		cid.MustParse("bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"),
+		cid.MustParse("bafkqaaa"),
+		cid.MustParse("QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH"),
+		cid.MustParse("bafyreigbtj4x7ip5legnfznufuopl4sg4knzc2cof6duas4b3q2fy6swua"),
+		cid.MustParse("baguqeeraiqjw7i2vwntyuekgvulpp2det2kpwt6cd7tx5ayqybqpmhfk76fa"),
 	}
 
-	if !s.b.IsCidBlocked(c3) {
-		return errors.New("testCID: c3 should be blocked (rule1)")
+	for _, c := range blockedCids {
+		if !s.b.IsCidBlocked(c) {
+			return fmt.Errorf("testCID: %s should be blocked (rule1)", c)
+		}
 	}
 
+	for _, c := range allowCids {
+		if s.b.IsCidBlocked(c) {
+			return fmt.Errorf("testCID: %s should NOT be blocked (rule14)", c)
+		}
+	}
 	return nil
 }
 

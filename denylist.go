@@ -26,6 +26,19 @@ const maxHeaderSize = 1 << 20 // 1MiB per the spec
 const maxLineSize = 2 << 20   // 2MiB per the spec
 const currentVersion = 1
 
+// SafeCids is a map of known, innoffensive CIDs that correspond to
+// empty-blocks or empty-directories. Blocking these can break applications so
+// they are ignored (with a warning), when they appear on a denylist.
+var SafeCids = map[cid.Cid]string{
+	cid.MustParse("QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"):                "empty unixfs directory",
+	cid.MustParse("bafyaabakaieac"):                                                "empty unixfs directory inlined",
+	cid.MustParse("bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku"):   "empty block",
+	cid.MustParse("bafkqaaa"):                                                      "empty block inlined",
+	cid.MustParse("QmbFMke1KXqnYyBBWxB74N4c5SBnJMVAiMNRcGu6x1AwQH"):                "empty block dag-pb",
+	cid.MustParse("bafyreigbtj4x7ip5legnfznufuopl4sg4knzc2cof6duas4b3q2fy6swua"):   "empty block dag-cbor",
+	cid.MustParse("baguqeeraiqjw7i2vwntyuekgvulpp2det2kpwt6cd7tx5ayqybqpmhfk76fa"): "empty block dag-json",
+}
+
 // DenylistHeader represents the header of a Denylist file.
 type DenylistHeader struct {
 	Version     int
@@ -422,6 +435,14 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 		if err != nil {
 			return fmt.Errorf("error extracting cid %s (%s:%d): %w", cidStr, dl.Filename, number, err)
 		}
+
+		// Blocking these by mistake can break some applications (by
+		// "some" we mean Kubo).
+		if _, ok := SafeCids[c]; ok {
+			logger.Warnf("Ignored: %s corresponds to a known empty folder or block and will not be blocked", c)
+			return nil
+		}
+
 		e.Multihash = c.Hash()
 
 		blockedPath, err := NewBlockedPath(subPath)
