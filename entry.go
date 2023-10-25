@@ -1,6 +1,7 @@
 package nopfs
 
 import (
+	"bytes"
 	"fmt"
 	"net/url"
 	"strings"
@@ -25,6 +26,22 @@ func (e Entry) String() string {
 		path = "(empty)"
 	}
 	return fmt.Sprintf("Path: %s. Prefix: %t. AllowRule: %t.", path, e.Path.Prefix, e.AllowRule)
+}
+
+func (e Entry) Clone() Entry {
+	hints := make(map[string]string, len(e.Hints))
+	for k, v := range e.Hints {
+		hints[k] = v
+	}
+
+	return Entry{
+		Line:      e.Line,
+		AllowRule: e.AllowRule,
+		Hints:     hints,
+		RawValue:  e.RawValue,
+		Multihash: bytes.Clone(e.Multihash),
+		Path:      e.Path,
+	}
 }
 
 // Entries is a slice of Entry.
