@@ -15,6 +15,7 @@ import (
 	"github.com/ipfs/go-cid"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"
+	mhreg "github.com/multiformats/go-multihash/core"
 	"go.uber.org/multierr"
 	"gopkg.in/yaml.v3"
 )
@@ -99,7 +100,7 @@ type Denylist struct {
 
 	IPFSBlocksDB       *BlocksDB
 	IPNSBlocksDB       *BlocksDB
-	DoubleHashBlocksDB map[uint64]*BlocksDB // codec -> blocks using that codec
+	DoubleHashBlocksDB map[uint64]*BlocksDB // mhCode -> blocks using that code
 	PathBlocksDB       *BlocksDB
 	PathPrefixBlocks   Entries
 	// MimeBlocksDB
@@ -368,46 +369,100 @@ func (dl *Denylist) parseLine(line string, number uint64) error {
 	switch {
 	case strings.HasPrefix(rule, "//"):
 		// Double-hash rule.
-		// It can be a Multihash (CIDv0) or a sha256-hex-encoded string.
+		// It can be a Multihash or a sha256-hex-encoded string.
 
-		var mhType uint64
-		// attempt to parse CID
 		rule = strings.TrimPrefix(rule, "//")
-		c, err := cid.Decode(rule)
-		if err == nil {
-			prefix := c.Prefix()
-			if prefix.Version != 0 {
-				return fmt.Errorf("double-hash is not a raw-multihash (cidv0) (%s:%d)", dl.Filename, number)
+
+		parseMultihash := func(mhStr string) (uint64, multihash.Multihash, error) {
+			mh, err := multihash.FromB58String(rule)
+			if err != nil { // not a b58 string usually
+				return 0, nil, err
 			}
-			e.Multihash = c.Hash()
-			// we use the multihash codec to group double-hashes
-			// with the same hashing function.
-			mhType = c.Prefix().MhType
-		} else { // Assume a hex-encoded sha256 string
+			dmh, err := multihash.Decode(mh)
+			if err != nil { // looked like a mhash but it was not.
+				return 0, nil, err
+			}
+
+			// Identity hash doesn't make sense for double
+			// hashing.  In practice it is usually a hex string
+			// that has been wrongly parsed as multihash.
+			if dmh.Code == 0 {
+				return 0, nil, errors.New("identity hash cannot be a double hash")
+			}
+
+			// if we are here it means we have something that
+			// could be interpreted as a multihash but it may
+			// still be a hex-encoded string that just parsed as
+			// b58 fine. In any case, we should check we know how to
+			// hash for this type of multihash.
+			_, err = mhreg.GetVariableHasher(dmh.Code, dmh.Length)
+			if err != nil {
+				return 0, nil, err
+			}
+
+			return dmh.Code, mh, nil
+		}
+
+		parseHexString := func(hexStr string) (uint64, multihash.Multihash, error) {
+			if len(hexStr) != 64 {
+				return 0, nil, errors.New("hex string are sha2-256 hashes and must be 64 chars (32 bytes) long")
+			}
+
 			bs, err := hex.DecodeString(rule)
 			if err != nil {
-				return fmt.Errorf("double-hash is not a multihash nor a hex-encoded string (%s:%d): %w", dl.Filename, number, err)
+				return 0, nil, err
 			}
 			// We have a hex-encoded string and assume it is a
 			// SHA2_256. TODO: could support hints here to use
 			// different functions.
 			mhBytes, err := multihash.Encode(bs, multihash.SHA2_256)
 			if err != nil {
+				return 0, nil, err
+			}
+			return multihash.SHA2_256, multihash.Multihash(mhBytes), nil
+		}
+
+		addRule := func(e Entry, mhType uint64, mh multihash.Multihash) error {
+			bpath, _ := NewBlockedPath("")
+			e.Path = bpath
+			e.Multihash = mh
+
+			// Store it in the appropriate BlocksDB (per mhtype).
+			key := e.Multihash.B58String()
+			if blocks := dl.DoubleHashBlocksDB[mhType]; blocks == nil {
+				dl.DoubleHashBlocksDB[mhType] = &BlocksDB{}
+			}
+			dl.DoubleHashBlocksDB[mhType].Store(key, e)
+			logger.Debugf("%s:%d: Double-hash rule. Func: %s. Key: %s. Entry: %s", filepath.Base(dl.Filename), number, multicodec.Code(mhType).String(), key, e)
+			return nil
+		}
+
+		// We have to assume that perhaps one day a sha256 hex string
+		// is going to parse as a valid multihash with an known
+		// hashing function etc. And vice-versa perhaps.
+		//
+		// In a case where we cannot distinguish between a b58btc
+		// multihash and a hex-string, we add rules for both, to make
+		// sure we always block what should be blocked.
+		code, mh, err1 := parseMultihash(rule)
+		if err1 == nil {
+			// clone the entry as add-rule modifies it.
+			e1 := e.Clone()
+			if err := addRule(e1, code, mh); err != nil {
 				return err
 			}
-			e.Multihash = multihash.Multihash(mhBytes)
-			mhType = multihash.SHA2_256
 		}
-		bpath, _ := NewBlockedPath("")
-		e.Path = bpath
 
-		// Store it in the appropriate BlocksDB (per mhtype).
-		key := e.Multihash.B58String()
-		if blocks := dl.DoubleHashBlocksDB[mhType]; blocks == nil {
-			dl.DoubleHashBlocksDB[mhType] = &BlocksDB{}
+		code, mh, err2 := parseHexString(rule)
+		if err2 == nil {
+			if err := addRule(e, code, mh); err != nil {
+				return err
+			}
 		}
-		dl.DoubleHashBlocksDB[mhType].Store(key, e)
-		logger.Debugf("%s:%d: Double-hash rule. Func: %s. Key: %s. Entry: %s", filepath.Base(dl.Filename), number, multicodec.Code(mhType).String(), key, e)
+
+		if err1 != nil && err2 != nil {
+			return fmt.Errorf("double-hash cannot be parsed as a multihash with a supported hashing function (%w) nor as a sha256 hex-encoded string (%w) (%s:%d)", err1, err2, dl.Filename, number)
+		}
 
 	case strings.HasPrefix(rule, "/ipfs/"), strings.HasPrefix(rule, "/ipld/"):
 		// ipfs/ipld rule. We parse the CID and use the
@@ -582,9 +637,11 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	}
 
 	// Double-hash blocking
-	for codec, blocks := range dl.DoubleHashBlocksDB {
-		double, err := multihash.Sum([]byte(p.String()), codec, -1)
+	for mhCode, blocks := range dl.DoubleHashBlocksDB {
+		double, err := multihash.Sum([]byte(p.String()), mhCode, -1)
 		if err != nil {
+			// Usually this means an unsupported hash function was
+			// registered.
 			logger.Error(err)
 			continue
 		}
@@ -696,7 +753,7 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	}
 
 	prefix := c.Prefix()
-	for codec, blocks := range dl.DoubleHashBlocksDB {
+	for mhCode, blocks := range dl.DoubleHashBlocksDB {
 		// <cidv1base32>/<path>
 		// TODO: we should be able to disable this part with an Option
 		// or a hint for denylists not using it.
@@ -705,15 +762,17 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 		// badbits appends / on empty subpath. and hashes that
 		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
 		v1b32path += "/" + subpath
-		doubleLegacy, err := multihash.Sum([]byte(v1b32path), codec, -1)
+		doubleLegacy, err := multihash.Sum([]byte(v1b32path), mhCode, -1)
 		if err != nil {
+			// Usually this means an unsupported hash function was
+			// registered.
 			logger.Error(err)
 			continue
 		}
 
 		// encode as b58 which is the key we use for the BlocksDB.
 		b58 := doubleLegacy.B58String()
-		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", codec, b58)
+		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", mhCode, b58)
 		entries, _ := blocks.Load(b58)
 		status, entry := entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
@@ -730,13 +789,15 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 		if subpath != "" {
 			v0path += "/" + subpath
 		}
-		double, err := multihash.Sum([]byte(v0path), codec, -1)
+		double, err := multihash.Sum([]byte(v0path), mhCode, -1)
 		if err != nil {
+			// Usually this means an unsupported hash function was
+			// registered.
 			logger.Error(err)
 			continue
 		}
 		b58 = double.B58String()
-		logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", codec, b58)
+		logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", mhCode, b58)
 		entries, _ = blocks.Load(b58)
 		status, entry = entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
@@ -862,16 +923,18 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 		}
 	}
 
-	// Otherwise, double-hash the multihash string with the given codecs for
+	// Otherwise, double-hash the multihash string with the given codes for
 	// which we have blocks.
-	for codec, blocks := range dl.DoubleHashBlocksDB {
-		double, err := multihash.Sum([]byte(b58), codec, -1)
+	for mhCode, blocks := range dl.DoubleHashBlocksDB {
+		double, err := multihash.Sum([]byte(b58), mhCode, -1)
 		if err != nil {
+			// Usually this means an unsupported hash function was
+			// registered.
 			logger.Error(err)
 			continue
 		}
 		b58 := double.B58String()
-		logger.Debugf("IsCidBlocked load %d doublehash: %s", codec, b58)
+		logger.Debugf("IsCidBlocked load %d doublehash: %s", mhCode, b58)
 		entries, _ := blocks.Load(b58)
 		status, entry := entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
