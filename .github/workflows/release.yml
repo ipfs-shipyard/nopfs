@@ -41,7 +41,7 @@ jobs:
         mv nopfs-kubo-plugin/nopfs-kubo-plugin.tar.gz "$NAME"
         echo "ARTIFACT_NAME=$NAME" >> "$GITHUB_ENV"
     - name: Archive artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ${{ env.ARTIFACT_NAME }}
         path: nopfs-kubo-plugin_*.tar.gz
