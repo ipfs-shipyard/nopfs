@@ -75,7 +75,7 @@ jobs:
         echo PLUGIN_ARTIFACT=nopfs-kubo-plugin_${RELEASE}_${GOHOSTOS}_amd64.tar.gz >> "$GITHUB_ENV"
     - name: Download artifact
       id: download
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         name: ${{ env.PLUGIN_ARTIFACT }}
     - name: Download unpack Kubo
@@ -101,7 +101,7 @@ jobs:
     steps:
     - name: Download artifacts
       id: download
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     - name: Extract release name from tag
       run: |
         RELEASE=$(basename ${{ github.ref_name }})
