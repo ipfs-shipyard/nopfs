@@ -107,7 +107,7 @@ jobs:
         RELEASE=$(basename ${{ github.ref_name }})
         echo "RELEASE=$RELEASE" >> "$GITHUB_ENV"
     - name: Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       if: startsWith(github.ref, 'refs/tags/nopfs-kubo-plugin/v')
       with:
         files: nopfs-kubo-plugin_*.tar.gz/*
