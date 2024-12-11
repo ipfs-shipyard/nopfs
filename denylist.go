@@ -616,6 +616,40 @@ func toDNSLinkFQDN(label string) string {
 	return result.String()
 }
 
+func (dl *Denylist) checkDoubleHashWithFn(caller string, origKey string, code uint64) (Status, Entry, error) {
+	blocksdb, ok := dl.DoubleHashBlocksDB[code]
+	if !ok {
+		return StatusErrored, Entry{}, fmt.Errorf("no DoubleHashBlocksDB for code %d", code)
+	}
+	// Double-hash the key
+	doubleHash, err := multihash.Sum([]byte(origKey), code, -1)
+	if err != nil {
+		// Usually this means an unsupported hash function was
+		// registered. We log and ignore.
+		logger.Error(err)
+		return StatusNotFound, Entry{}, nil
+	}
+	b58DoubleHash := doubleHash.B58String()
+	logger.Debugf("%s load IPNS doublehash: %d %s", caller, code, b58DoubleHash)
+	entries, _ := blocksdb.Load(b58DoubleHash)
+	status, entry := entries.CheckPathStatus("") // double-hashes cannot have entry-subpaths
+	return status, entry, nil
+}
+
+func (dl *Denylist) checkDoubleHash(caller string, origKey string) (Status, Entry, error) {
+	for mhCode := range dl.DoubleHashBlocksDB {
+		status, entry, err := dl.checkDoubleHashWithFn(caller, origKey, mhCode)
+		if err != nil {
+			return status, entry, err
+		}
+		if status != StatusNotFound { // hit!
+			return status, entry, nil
+		}
+	}
+	return StatusNotFound, Entry{}, nil
+
+}
+
 // IsIPNSPathBlocked returns Blocking Status for a given IPNS name and its
 // subpath. The name is NOT an "/ipns/name" path, but just the name.
 func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
@@ -661,82 +695,40 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	// Double-hash blocking, works by double-hashing "/ipns/<name>/<path>"
 	// Legacy double-hashes for dnslink will hash "domain.com/" (trailing
 	// slash) or "<cidV1b32>/" for ipns-key blocking
-
-	// Let's start with legacy
-	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
-	if sha256blocks != nil {
-		legacyKey := name + "/" + subpath
-		if c.Defined() { // we parsed a CID before
-			legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).String()
-			legacyKey = legacyCid + "/" + subpath
-		}
-		// now double-hash that key
-		doubleLegacy, err := multihash.Sum([]byte(legacyKey), multihash.SHA2_256, -1)
-		if err != nil {
-			logger.Error(err)
-			return StatusResponse{
-				Path:     p,
-				Status:   StatusErrored,
-				Filename: dl.Filename,
-				Error:    err,
-			}
-		}
-		// now perform the lookup using the B58 string which we use as
-		// key.
-		b58legacy := doubleLegacy.B58String()
-		logger.Debugf("IsIPNSPathBlocked load IPNS doublehash (legacy): %d %s", multihash.SHA2_256, b58legacy)
-		entries, _ := sha256blocks.Load(b58legacy)
-		status, entry := entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Path:     p,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
+	legacyKey := name + "/" + subpath
+	if c.Defined() { // we parsed a CID before
+		legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).String()
+		legacyKey = legacyCid + "/" + subpath
+	}
+	status, entry, err = dl.checkDoubleHashWithFn("IsIPNSPathBlocked (legacy)", legacyKey, multihash.SHA2_256)
+	if status != StatusNotFound { // hit or error
+		return StatusResponse{
+			Path:     p,
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+			Error:    err,
 		}
 	}
 
 	// Modern double-hash approach
-	for mhCode, blocks := range dl.DoubleHashBlocksDB {
-		key := p.String()
-		if c.Defined() { // the ipns path is a CID The
-			// b58-encoded-multihash extracted from an IPNS name
-			// when the IPNS is a CID.
-			key = c.Hash().B58String()
-			if len(subpath) > 0 {
-				key += "/" + subpath
-			}
-		}
-
-		// A base58btc-encoded multihash corresponding to the
-		// above.
-		double, err := multihash.Sum([]byte(key), mhCode, -1)
-		if err != nil {
-			// Usually this means an unsupported hash function was
-			// registered.
-			logger.Error(err)
-			continue
-		}
-		b58 := double.B58String()
-		logger.Debugf("IsIPNSPathBlocked load IPNS doublehash: %d %s", mhCode, b58)
-		entries, _ := blocks.Load(b58)
-		status, entry := entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Path:     p,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
+	key = p.String()
+	if c.Defined() { // the ipns path is a CID The
+		// b58-encoded-multihash extracted from an IPNS name
+		// when the IPNS is a CID.
+		key = c.Hash().B58String()
+		if len(subpath) > 0 {
+			key += "/" + subpath
 		}
 	}
 
-	// Not found
+	status, entry, err = dl.checkDoubleHash("IsIPNSPathBlocked", key)
 	return StatusResponse{
 		Path:     p,
-		Status:   StatusNotFound,
+		Status:   status,
 		Filename: dl.Filename,
+		Entry:    entry,
+		Error:    err,
 	}
 }
 
@@ -826,76 +818,40 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	}
 
 	prefix := c.Prefix()
-
-	// Checks for legacy doublehash blocking, which only uses SHA2_256
-	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
-	if sha256blocks != nil {
-		// <cidv1base32>/<path>
-		// TODO: we should be able to disable this part with an Option
-		// or a hint for denylists not using it.
-		v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
-		v1b32path := v1b32
-		// badbits appends / on empty subpath. and hashes that
-		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
-		v1b32path += "/" + subpath
-		doubleLegacy, err := multihash.Sum([]byte(v1b32path), multihash.SHA2_256, -1)
-		if err != nil {
-			logger.Error(err)
-			return StatusResponse{
-				Path:     p,
-				Status:   StatusErrored,
-				Filename: dl.Filename,
-				Error:    err,
-			}
-		}
-
-		// encode as b58 which is the key we use for the BlocksDB.
-		b58 := doubleLegacy.B58String()
-		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", multihash.SHA2_256, b58)
-		entries, _ := sha256blocks.Load(b58)
-		status, entry := entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Path:     p,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
+	// Checks for legacy doublehash blocking
+	// <cidv1base32>/<path>
+	// TODO: we should be able to disable this part with an Option
+	// or a hint for denylists not using it.
+	v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
+	v1b32path := v1b32
+	// badbits appends / on empty subpath. and hashes that
+	// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
+	v1b32path += "/" + subpath
+	status, entry, err = dl.checkDoubleHashWithFn("IsIPFSIPLDPathBlocked (legacy)", v1b32path, multihash.SHA2_256)
+	if status != StatusNotFound { // hit or error
+		return StatusResponse{
+			Path:     p,
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+			Error:    err,
 		}
 	}
 
 	// Otherwise just check normal double-hashing of multihash
 	// for all double-hashing functions used.
-	for mhCode, blocks := range dl.DoubleHashBlocksDB {
-		// <cidv0>/<path>
-		v0path := c.Hash().B58String()
-		if subpath != "" {
-			v0path += "/" + subpath
-		}
-		double, err := multihash.Sum([]byte(v0path), mhCode, -1)
-		if err != nil {
-			// Usually this means an unsupported hash function was
-			// registered.
-			logger.Error(err)
-			continue
-		}
-		b58 := double.B58String()
-		logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", mhCode, b58)
-		entries, _ = blocks.Load(b58)
-		status, entry = entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Path:     p,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
-		}
+	// <cidv0>/<path>
+	v0path := c.Hash().B58String()
+	if subpath != "" {
+		v0path += "/" + subpath
 	}
+	status, entry, err = dl.checkDoubleHash("IsIPFSIPLDPathBlocked", v0path)
 	return StatusResponse{
 		Path:     p,
-		Status:   StatusNotFound,
+		Status:   status,
 		Filename: dl.Filename,
+		Entry:    entry,
+		Error:    err,
 	}
 }
 
@@ -956,8 +912,7 @@ func (dl *Denylist) IsPathBlocked(p path.Path) StatusResponse {
 // IsCidBlocked provides Blocking Status for a given CID.  This is done by
 // extracting the multihash and checking if it is blocked by any rule.
 func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
-	mh := c.Hash()
-	b58 := mh.B58String()
+	b58 := c.Hash().B58String()
 	logger.Debugf("IsCidBlocked load: %s", b58)
 	entries, _ := dl.IPFSBlocksDB.Load(b58)
 	// Look for an entry with an empty path
@@ -973,66 +928,31 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	}
 
 	// Now check if a double-hash covers this CID
+
 	// Legacy double-hashing support.
 	// convert cid to v1 base32
 	// the double-hash using multhash sha2-256
 	// then check that
-	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
-	if sha256blocks != nil {
-		prefix := c.Prefix()
-		b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() + "/" // yes, needed
-		logger.Debug("IsCidBlocked cidv1b32 (legacy) ", b32)
-		double, err := multihash.Sum([]byte(b32), multihash.SHA2_256, -1)
-		if err != nil {
-			logger.Error(err)
-			return StatusResponse{
-				Cid:      c,
-				Status:   StatusErrored,
-				Filename: dl.Filename,
-				Error:    err,
-			}
-		}
-		b58 := double.B58String()
-		logger.Debugf("IsCidBlocked load sha256 doublehash (legacy): %s", b58)
-		entries, _ := sha256blocks.Load(b58)
-		status, entry := entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Cid:      c,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
+	prefix := c.Prefix()
+	b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() + "/" // yes, needed
+	status, entry, err := dl.checkDoubleHashWithFn("IsCidBlocked (legacy)", b32, multihash.SHA2_256)
+	if status != StatusNotFound { // hit or error
+		return StatusResponse{
+			Cid:      c,
+			Status:   status,
+			Filename: dl.Filename,
+			Entry:    entry,
+			Error:    err,
 		}
 	}
 
-	// Otherwise, double-hash the multihash string with the given codes for
-	// which we have blocks.
-	for mhCode, blocks := range dl.DoubleHashBlocksDB {
-		double, err := multihash.Sum([]byte(b58), mhCode, -1)
-		if err != nil {
-			// Usually this means an unsupported hash function was
-			// registered.
-			logger.Error(err)
-			continue
-		}
-		b58 := double.B58String()
-		logger.Debugf("IsCidBlocked load %d doublehash: %s", mhCode, b58)
-		entries, _ := blocks.Load(b58)
-		status, entry := entries.CheckPathStatus("")
-		if status != StatusNotFound { // Hit!
-			return StatusResponse{
-				Cid:      c,
-				Status:   status,
-				Filename: dl.Filename,
-				Entry:    entry,
-			}
-		}
-	}
-
+	// Otherwise, double-hash the multihash string.
+	status, entry, err = dl.checkDoubleHash("IsCidBlocked", b58)
 	return StatusResponse{
 		Cid:      c,
-		Status:   StatusNotFound,
+		Status:   status,
 		Filename: dl.Filename,
+		Entry:    entry,
+		Error:    err,
 	}
 }

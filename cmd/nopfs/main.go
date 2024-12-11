@@ -25,7 +25,7 @@ func printUsage() {
 }
 
 func main() {
-	logging.SetLogLevel("nopfs", "DEBUG")
+	logging.SetLogLevel("nopfs", "ERROR")
 	filename := "test.deny"
 	if len(os.Args) < 2 || os.Args[1] == "-h" || os.Args[1] == "--help" {
 		fmt.Println("nopfs: denylist testing REPL")
