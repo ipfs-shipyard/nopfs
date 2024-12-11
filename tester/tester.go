@@ -139,7 +139,7 @@ func (s *Suite) testCID() error {
 		cid.MustParse("QmesfgDQ3q6prBy2Kg2gKbW4MAGuWiRP2DVuGA5MZSERLo"),
 	}
 
-	// rule14
+	// rule15
 	allowCids := []cid.Cid{
 		cid.MustParse("QmUNLLsPACCz1vLxQVkXqqLX5R1X345qqfHbsf67hvA3Nn"),
 		cid.MustParse("bafyaabakaieac"),
@@ -158,7 +158,7 @@ func (s *Suite) testCID() error {
 
 	for _, c := range allowCids {
 		if s.b.IsCidBlocked(c) {
-			return fmt.Errorf("testCID: %s should NOT be blocked (rule14)", c)
+			return fmt.Errorf("testCID: %s should NOT be blocked (rule15)", c)
 		}
 	}
 	return nil
@@ -338,6 +338,15 @@ func (s *Suite) testDoubleHashLegacy() error {
 	if !s.b.IsCidBlocked(c) {
 		return fmt.Errorf("%s: cid %s should be blocked (rule10)", n, c)
 	}
+	rule10 := []string{
+		"/ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01dlniq",
+		"/ipns/bafzaajaiaejca3vrvdzmu4qntwa2pn6apsd4ug5k63ckdyhnd3g6vdvgvujdw62s",
+		"/ipns/very-bad-example.eth",
+		"/ipns/very-bad-example.eth/",
+	}
+	if err := s.testPaths(rule10, n, "rule10", false); err != nil {
+		return err
+	}
 
 	//rule 11 (and 10)
 	rule11 := []string{
@@ -393,6 +402,27 @@ func (s *Suite) testDoubleHash() error {
 	}
 
 	if err := s.testPaths(rule13allowed, n, "rule13", true); err != nil {
+		return err
+	}
+
+	// rule14
+	rule14 := []string{
+		"/ipns/my.domain.com",
+		"/ipns/my.domain2.com/path",
+		"/ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01dabcd",
+		"/ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01d1234/mypath",
+		"/ipns/bafzaajaiaejca3vrvdzmu4qntwa2pn6apsd4ug5k63ckdyhnd3g6vdvgvujczuoq/mypath",
+	}
+	rule14allowed := []string{
+		"/ipns/my.domain2.com/path2",
+		"/ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01d1234/mypath2",
+	}
+
+	if err := s.testPaths(rule14, n, "rule14", false); err != nil {
+		return err
+	}
+
+	if err := s.testPaths(rule14allowed, n, "rule14", true); err != nil {
 		return err
 	}
 

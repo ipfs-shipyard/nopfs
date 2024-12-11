@@ -639,6 +639,7 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	c, err := cid.Decode(key)
 	if err == nil {
 		key = c.Hash().B58String()
+		//
 	} else if !strings.ContainsRune(key, '.') {
 		// not a CID. It must be a ipns-dnslink name if it does not
 		// contain ".", maybe they got replaced by "-"
@@ -657,9 +658,60 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 		}
 	}
 
-	// Double-hash blocking
+	// Double-hash blocking, works by double-hashing "/ipns/<name>/<path>"
+	// Legacy double-hashes for dnslink will hash "domain.com/" (trailing
+	// slash) or "<cidV1b32>/" for ipns-key blocking
+
+	// Let's start with legacy
+	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
+	if sha256blocks != nil {
+		legacyKey := name + "/" + subpath
+		if c.Defined() { // we parsed a CID before
+			legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).String()
+			legacyKey = legacyCid + "/" + subpath
+		}
+		// now double-hash that key
+		doubleLegacy, err := multihash.Sum([]byte(legacyKey), multihash.SHA2_256, -1)
+		if err != nil {
+			logger.Error(err)
+			return StatusResponse{
+				Path:     p,
+				Status:   StatusErrored,
+				Filename: dl.Filename,
+				Error:    err,
+			}
+		}
+		// now perform the lookup using the B58 string which we use as
+		// key.
+		b58legacy := doubleLegacy.B58String()
+		logger.Debugf("IsIPNSPathBlocked load IPNS doublehash (legacy): %d %s", multihash.SHA2_256, b58legacy)
+		entries, _ := sha256blocks.Load(b58legacy)
+		status, entry := entries.CheckPathStatus("")
+		if status != StatusNotFound { // Hit!
+			return StatusResponse{
+				Path:     p,
+				Status:   status,
+				Filename: dl.Filename,
+				Entry:    entry,
+			}
+		}
+	}
+
+	// Modern double-hash approach
 	for mhCode, blocks := range dl.DoubleHashBlocksDB {
-		double, err := multihash.Sum([]byte(p.String()), mhCode, -1)
+		key := p.String()
+		if c.Defined() { // the ipns path is a CID The
+			// b58-encoded-multihash extracted from an IPNS name
+			// when the IPNS is a CID.
+			key = c.Hash().B58String()
+			if len(subpath) > 0 {
+				key += "/" + subpath
+			}
+		}
+
+		// A base58btc-encoded multihash corresponding to the
+		// above.
+		double, err := multihash.Sum([]byte(key), mhCode, -1)
 		if err != nil {
 			// Usually this means an unsupported hash function was
 			// registered.
@@ -667,7 +719,7 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 			continue
 		}
 		b58 := double.B58String()
-		logger.Debugf("IsPathBlocked load IPNS doublehash: %s", b58)
+		logger.Debugf("IsIPNSPathBlocked load IPNS doublehash: %d %s", mhCode, b58)
 		entries, _ := blocks.Load(b58)
 		status, entry := entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
@@ -774,7 +826,10 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	}
 
 	prefix := c.Prefix()
-	for mhCode, blocks := range dl.DoubleHashBlocksDB {
+
+	// Checks for legacy doublehash blocking, which only uses SHA2_256
+	sha256blocks := dl.DoubleHashBlocksDB[multihash.SHA2_256]
+	if sha256blocks != nil {
 		// <cidv1base32>/<path>
 		// TODO: we should be able to disable this part with an Option
 		// or a hint for denylists not using it.
@@ -783,18 +838,21 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 		// badbits appends / on empty subpath. and hashes that
 		// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
 		v1b32path += "/" + subpath
-		doubleLegacy, err := multihash.Sum([]byte(v1b32path), mhCode, -1)
+		doubleLegacy, err := multihash.Sum([]byte(v1b32path), multihash.SHA2_256, -1)
 		if err != nil {
-			// Usually this means an unsupported hash function was
-			// registered.
 			logger.Error(err)
-			continue
+			return StatusResponse{
+				Path:     p,
+				Status:   StatusErrored,
+				Filename: dl.Filename,
+				Error:    err,
+			}
 		}
 
 		// encode as b58 which is the key we use for the BlocksDB.
 		b58 := doubleLegacy.B58String()
-		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", mhCode, b58)
-		entries, _ := blocks.Load(b58)
+		logger.Debugf("IsIPFFSIPLDPathBlocked load IPFS doublehash (legacy): %d %s", multihash.SHA2_256, b58)
+		entries, _ := sha256blocks.Load(b58)
 		status, entry := entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
 			return StatusResponse{
@@ -804,7 +862,11 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 				Entry:    entry,
 			}
 		}
+	}
 
+	// Otherwise just check normal double-hashing of multihash
+	// for all double-hashing functions used.
+	for mhCode, blocks := range dl.DoubleHashBlocksDB {
 		// <cidv0>/<path>
 		v0path := c.Hash().B58String()
 		if subpath != "" {
@@ -817,7 +879,7 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 			logger.Error(err)
 			continue
 		}
-		b58 = double.B58String()
+		b58 := double.B58String()
 		logger.Debugf("IsPathBlocked load IPFS doublehash: %d %s", mhCode, b58)
 		entries, _ = blocks.Load(b58)
 		status, entry = entries.CheckPathStatus("")
@@ -911,7 +973,7 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	}
 
 	// Now check if a double-hash covers this CID
-
+	// Legacy double-hashing support.
 	// convert cid to v1 base32
 	// the double-hash using multhash sha2-256
 	// then check that
@@ -919,7 +981,7 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	if sha256blocks != nil {
 		prefix := c.Prefix()
 		b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() + "/" // yes, needed
-		logger.Debug("IsCidBlocked cidv1b32 ", b32)
+		logger.Debug("IsCidBlocked cidv1b32 (legacy) ", b32)
 		double, err := multihash.Sum([]byte(b32), multihash.SHA2_256, -1)
 		if err != nil {
 			logger.Error(err)
@@ -931,7 +993,7 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 			}
 		}
 		b58 := double.B58String()
-		logger.Debugf("IsCidBlocked load sha256 doublehash: %s", b58)
+		logger.Debugf("IsCidBlocked load sha256 doublehash (legacy): %s", b58)
 		entries, _ := sha256blocks.Load(b58)
 		status, entry := entries.CheckPathStatus("")
 		if status != StatusNotFound { // Hit!
