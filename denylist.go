@@ -822,7 +822,7 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	// <cidv1base32>/<path>
 	// TODO: we should be able to disable this part with an Option
 	// or a hint for denylists not using it.
-	v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
+	v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(mbase.Base32) // base32 string
 	v1b32path := v1b32
 	// badbits appends / on empty subpath. and hashes that
 	// https://specs.ipfs.tech/compact-denylist-format/#double-hash
