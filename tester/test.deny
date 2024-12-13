@@ -53,6 +53,16 @@ author: "@hsanjuan"
 # sha256(bafybeiefwqslmf6zyyrxodaxx4vwqircuxpza5ri45ws3y5a62ypxti42e/)
 # blocks only this cid
 //d9d295bde21f422d471a90f2a37ec53049fdf3e5fa3ee2e8f20e10003da429e7
+# Legacy IPNS hash block
+# /ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01dlniq
+# becomes CIDv1 bafzaajaiaejca3vrvdzmu4qntwa2pn6apsd4ug5k63ckdyhnd3g6vdvgvujdw62s
+# then sha256(bafzaajaiaejca3vrvdzmu4qntwa2pn6apsd4ug5k63ckdyhnd3g6vdvgvujdw62s/)
+# should block /ipns/<key> in any format
+//6ef262a67f2c7caa9722b0fe46aced2f1559c749eab2bcf2f2701f43f802e900
+# Legacy DNSLink hash block
+# sha256(very-bad-example.eth/)
+//fb5a70b1aade810d21e8195a0da05f40ebd099e4b4d6bf088dc604e4fcf34263
+
 
 # rule11
 # Legacy Path double-hash block
@@ -63,7 +73,7 @@ author: "@hsanjuan"
 //3f8b9febd851873b3774b937cce126910699ceac56e72e64b866f8e258d09572
 
 # rule12
-# Double hash CID block
+# Double hash CID
 # base58btc-sha256-multihash(QmVTF1yEejXd9iMgoRTFDxBv7HAz9kuZcQNBzHrceuK9HR)
 # This should block bafybeidjwik6im54nrpfg7osdvmx7zojl5oaxqel5cmsz46iuelwf5acja
 # and its CIDv0 form QmVTF1yEejXd9iMgoRTFDxBv7HAz9kuZcQNBzHrceuK9HR
@@ -81,6 +91,25 @@ author: "@hsanjuan"
 //gW813G35CnLsy7gRYYHuf63hrz71U1xoLFDVeV7actx6oX
 
 # rule14
+# Double hash IPNS blocks
+# /ipns/my.domain.com
+# becomes
+//QmX6zeaAb8mC285YbXe4ac7LmX3jvrHBiFrw8kNnCM1bk4
+# /ipns/my.domain2.com/path
+# should only block the specific path
+# and becomes
+//QmcwfDuZYijxztHVR7w71WtdDaETsrGUU3ARWbNiYD3Hhp
+# /ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01dabcd
+# is multihash 12D3KooWHGU91cJWKofZoHQ3hkVgs2c6WAJGxVCjMivwej9ufyuN
+# and hashed again becomes
+//QmdGtYErkPjfpUPjVMUypoX8XTE9PUTBBF6KE9AwWaBs1e
+# /ipns/k51qzi5uqu5dixwsch9wpd9rolqby1m0uqj5hhxwtxal0dwltastfmh01d1234/mypath
+# equivalent to /ipns/bafzaajaiaejca3vrvdzmu4qntwa2pn6apsd4ug5k63ckdyhnd3g6vdvgvujczuoq/mypath
+# is multihash 12D3KooWHGU91cJWKofZoHQ3hkVgs2c6WAJGxVCjMivwej9udmWo/mypath
+# and hashed again becomes
+//QmQouNeftXbxGRt4U8s838diCuMPPHCfpHTR5w8bRREs9d
+
+# rule15
 # These are known cids corresponding to empty blocks/folders
 # Even if they appear here, they should not be blocked
 # empty unixfs directory
