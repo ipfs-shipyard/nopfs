@@ -13,6 +13,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/ipfs/boxo/path"
 	"github.com/ipfs/go-cid"
+	"github.com/multiformats/go-multibase"
 	"github.com/multiformats/go-multicodec"
 	"github.com/multiformats/go-multihash"
 	mhreg "github.com/multiformats/go-multihash/core"
@@ -697,7 +698,15 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	// slash) or "<cidV1b32>/" for ipns-key blocking
 	legacyKey := name + "/" + subpath
 	if c.Defined() { // we parsed a CID before
-		legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).StringOfBase(mbase.Base32)
+		legacyCid, err := cid.NewCidV1(c.Prefix().Codec, c.Hash()).StringOfBase(multibase.Base32)
+		if err != nil {
+			return StatusResponse{
+				Path:     p,
+				Status:   StatusErrored,
+				Filename: dl.Filename,
+				Error:    err,
+			}
+		}
 		legacyKey = legacyCid + "/" + subpath
 	}
 	status, entry, err = dl.checkDoubleHashWithFn("IsIPNSPathBlocked (legacy)", legacyKey, multihash.SHA2_256)
@@ -822,11 +831,18 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	// <cidv1base32>/<path>
 	// TODO: we should be able to disable this part with an Option
 	// or a hint for denylists not using it.
-	v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(mbase.Base32) // base32 string
-	v1b32path := v1b32
+	v1b32, err := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(multibase.Base32) // base32 string
+	if err != nil {
+		return StatusResponse{
+			Path:     p,
+			Status:   StatusErrored,
+			Filename: dl.Filename,
+			Error:    err,
+		}
+	}
 	// badbits appends / on empty subpath. and hashes that
 	// https://specs.ipfs.tech/compact-denylist-format/#double-hash
-	v1b32path += "/" + subpath
+	v1b32path := v1b32 + "/" + subpath
 	status, entry, err = dl.checkDoubleHashWithFn("IsIPFSIPLDPathBlocked (legacy)", v1b32path, multihash.SHA2_256)
 	if status != StatusNotFound { // hit or error
 		return StatusResponse{
@@ -934,8 +950,17 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	// the double-hash using multhash sha2-256
 	// then check that
 	prefix := c.Prefix()
-	b32 := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(mbase.Base32) + "/" // yes, needed
-	status, entry, err := dl.checkDoubleHashWithFn("IsCidBlocked (legacy)", b32, multihash.SHA2_256)
+	b32, err := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(multibase.Base32)
+	if err != nil {
+		return StatusResponse{
+			Cid:      c,
+			Status:   StatusErrored,
+			Filename: dl.Filename,
+			Error:    err,
+		}
+	}
+	b32 += "/" // yes, needed
+	status, entry, err = dl.checkDoubleHashWithFn("IsCidBlocked (legacy)", b32, multihash.SHA2_256)
 	if status != StatusNotFound { // hit or error
 		return StatusResponse{
 			Cid:      c,
