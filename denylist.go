@@ -934,7 +934,7 @@ func (dl *Denylist) IsCidBlocked(c cid.Cid) StatusResponse {
 	// the double-hash using multhash sha2-256
 	// then check that
 	prefix := c.Prefix()
-	b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() + "/" // yes, needed
+	b32 := cid.NewCidV1(prefix.Codec, c.Hash()).StringOfBase(mbase.Base32) + "/" // yes, needed
 	status, entry, err := dl.checkDoubleHashWithFn("IsCidBlocked (legacy)", b32, multihash.SHA2_256)
 	if status != StatusNotFound { // hit or error
 		return StatusResponse{
