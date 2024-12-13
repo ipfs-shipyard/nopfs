@@ -825,7 +825,7 @@ func (dl *Denylist) isIPFSIPLDPathBlocked(cidStr, subpath, protocol string) Stat
 	v1b32 := cid.NewCidV1(prefix.Codec, c.Hash()).String() // base32 string
 	v1b32path := v1b32
 	// badbits appends / on empty subpath. and hashes that
-	// https://github.com/protocol/badbits.dwebops.pub/blob/main/badbits-lambda/helpers.py#L17
+	// https://specs.ipfs.tech/compact-denylist-format/#double-hash
 	v1b32path += "/" + subpath
 	status, entry, err = dl.checkDoubleHashWithFn("IsIPFSIPLDPathBlocked (legacy)", v1b32path, multihash.SHA2_256)
 	if status != StatusNotFound { // hit or error
