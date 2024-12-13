@@ -697,7 +697,7 @@ func (dl *Denylist) IsIPNSPathBlocked(name, subpath string) StatusResponse {
 	// slash) or "<cidV1b32>/" for ipns-key blocking
 	legacyKey := name + "/" + subpath
 	if c.Defined() { // we parsed a CID before
-		legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).String()
+		legacyCid := cid.NewCidV1(c.Prefix().Codec, c.Hash()).StringOfBase(mbase.Base32)
 		legacyKey = legacyCid + "/" + subpath
 	}
 	status, entry, err = dl.checkDoubleHashWithFn("IsIPNSPathBlocked (legacy)", legacyKey, multihash.SHA2_256)
