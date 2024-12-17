@@ -620,7 +620,7 @@ func toDNSLinkFQDN(label string) string {
 func (dl *Denylist) checkDoubleHashWithFn(caller string, origKey string, code uint64) (Status, Entry, error) {
 	blocksdb, ok := dl.DoubleHashBlocksDB[code]
 	if !ok {
-		return StatusErrored, Entry{}, fmt.Errorf("no DoubleHashBlocksDB for code %d", code)
+		return StatusNotFound, Entry{}, nil
 	}
 	// Double-hash the key
 	doubleHash, err := multihash.Sum([]byte(origKey), code, -1)
