@@ -1,4 +1,4 @@
-SRC := $(shell find ../.. -type f -name '*.go')
+SRC := $(shell find .. -type f -name '*.go')
 IPFS_PATH ?= $(HOME)/.ipfs
 
 export CGO_ENABLED := 1
