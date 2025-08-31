@@ -15,8 +15,10 @@ var _ blockservice.BlockService = (*BlockService)(nil)
 
 // BlockService implements a blocking BlockService.
 type BlockService struct {
-	blocker *nopfs.Blocker
-	bs      blockservice.BlockService
+	blocker           *nopfs.Blocker
+	bs                blockservice.BlockService
+	wrappedBlockstore blockstore.Blockstore
+	wrappedExchange   exchange.Interface
 }
 
 // WrapBlockService wraps the given BlockService with a content-blocking layer
@@ -24,10 +26,27 @@ type BlockService struct {
 func WrapBlockService(bs blockservice.BlockService, blocker *nopfs.Blocker) blockservice.BlockService {
 	logger.Debug("BlockService wrapped with content blocker")
 
-	return &BlockService{
+	wrapped := &BlockService{
 		blocker: blocker,
 		bs:      bs,
 	}
+
+	// Create wrapped blockstore and exchange
+	if bstore := bs.Blockstore(); bstore != nil {
+		wrapped.wrappedBlockstore = &BlockedBlockstore{
+			Blockstore: bstore,
+			blocker:    blocker,
+		}
+	}
+
+	if exch := bs.Exchange(); exch != nil {
+		wrapped.wrappedExchange = &BlockedExchange{
+			Interface: exch,
+			blocker:   blocker,
+		}
+	}
+
+	return wrapped
 }
 
 // Closes the BlockService and the Blocker.
@@ -36,37 +55,28 @@ func (nbs *BlockService) Close() error {
 	return nbs.bs.Close()
 }
 
-// Gets a block unless CID has been blocked.
+// GetBlock gets a block from the wrapped blockservice.
+// The wrapped blockstore and exchange handle blocking checks.
 func (nbs *BlockService) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
-	if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
-		logger.Warn(err.Response)
-		return nil, err
-	}
+	// No check needed here - wrapped blockstore/exchange will check
 	return nbs.bs.GetBlock(ctx, c)
 }
 
-// GetsBlocks reads several blocks. Blocked CIDs are filtered out of ks.
+// GetBlocks gets multiple blocks from the wrapped blockservice.
+// The wrapped exchange handles filtering of blocked CIDs.
 func (nbs *BlockService) GetBlocks(ctx context.Context, ks []cid.Cid) <-chan blocks.Block {
-	var filtered []cid.Cid
-	for _, c := range ks {
-		if err := nbs.blocker.IsCidBlocked(c).ToError(); err != nil {
-			logger.Warn(err.Response)
-			logger.Warnf("GetBlocks dropped blocked block: %s", err)
-		} else {
-			filtered = append(filtered, c)
-		}
-	}
-	return nbs.bs.GetBlocks(ctx, filtered)
+	// No filtering needed here - wrapped exchange will filter
+	return nbs.bs.GetBlocks(ctx, ks)
 }
 
-// Blockstore returns the underlying Blockstore.
+// Blockstore returns the wrapped Blockstore with blocking checks.
 func (nbs *BlockService) Blockstore() blockstore.Blockstore {
-	return nbs.bs.Blockstore()
+	return nbs.wrappedBlockstore
 }
 
-// Exchange returns the underlying Exchange.
+// Exchange returns the wrapped Exchange with blocking checks.
 func (nbs *BlockService) Exchange() exchange.Interface {
-	return nbs.bs.Exchange()
+	return nbs.wrappedExchange
 }
 
 // AddBlock adds a block unless the CID is blocked.
