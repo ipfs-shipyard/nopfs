@@ -28,6 +28,9 @@ type BlockedExchange struct {
 
 // GetBlock gets a block from the exchange only if it's not blocked.
 func (ex *BlockedExchange) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
+	if ex.blocker == nil {
+		return ex.Interface.GetBlock(ctx, c)
+	}
 	if err := ex.blocker.IsCidBlocked(c).ToError(); err != nil {
 		exchangeLogger.Warnf("GetBlock blocked: %s", c)
 		return nil, err
@@ -40,9 +43,11 @@ func (ex *BlockedExchange) GetBlock(ctx context.Context, c cid.Cid) (blocks.Bloc
 	}
 
 	// Double-check the returned block (in case exchange returns different CID)
-	if err := ex.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
-		exchangeLogger.Warnf("GetBlock returned blocked block: %s", blk.Cid())
-		return nil, err
+	if ex.blocker != nil {
+		if err := ex.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
+			exchangeLogger.Warnf("GetBlock returned blocked block: %s", blk.Cid())
+			return nil, err
+		}
 	}
 
 	return blk, nil
@@ -50,6 +55,9 @@ func (ex *BlockedExchange) GetBlock(ctx context.Context, c cid.Cid) (blocks.Bloc
 
 // GetBlocks gets multiple blocks from the exchange, filtering out blocked ones.
 func (ex *BlockedExchange) GetBlocks(ctx context.Context, ks []cid.Cid) (<-chan blocks.Block, error) {
+	if ex.blocker == nil {
+		return ex.Interface.GetBlocks(ctx, ks)
+	}
 	// Filter the input CIDs
 	var filtered []cid.Cid
 	for _, c := range ks {
@@ -84,9 +92,11 @@ func (ex *BlockedExchange) GetBlocks(ctx context.Context, ks []cid.Cid) (<-chan 
 					return
 				}
 				// Check if the returned block is blocked
-				if err := ex.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
-					exchangeLogger.Debugf("GetBlocks filtered blocked block from response: %s", blk.Cid())
-					continue
+				if ex.blocker != nil {
+					if err := ex.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
+						exchangeLogger.Debugf("GetBlocks filtered blocked block from response: %s", blk.Cid())
+						continue
+					}
 				}
 				select {
 				case out <- blk:
@@ -124,6 +134,10 @@ func (ex *BlockedExchange) NewSession(ctx context.Context) exchange.Fetcher {
 	if sesEx, ok := ex.Interface.(exchange.SessionExchange); ok {
 		// Create a session from the underlying exchange and wrap it
 		underlyingSession := sesEx.NewSession(ctx)
+		if ex.blocker == nil {
+			// If no blocker, return the session directly
+			return underlyingSession
+		}
 		return &BlockedFetcher{
 			Fetcher: underlyingSession,
 			blocker: ex.blocker,
@@ -143,6 +157,9 @@ type BlockedFetcher struct {
 
 // GetBlock gets a block from the fetcher only if it's not blocked.
 func (bf *BlockedFetcher) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block, error) {
+	if bf.blocker == nil {
+		return bf.Fetcher.GetBlock(ctx, c)
+	}
 	if err := bf.blocker.IsCidBlocked(c).ToError(); err != nil {
 		exchangeLogger.Warnf("GetBlock blocked: %s", c)
 		return nil, err
@@ -155,9 +172,11 @@ func (bf *BlockedFetcher) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block
 	}
 
 	// Double-check the returned block (in case fetcher returns different CID)
-	if err := bf.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
-		exchangeLogger.Warnf("GetBlock returned blocked block: %s", blk.Cid())
-		return nil, err
+	if bf.blocker != nil {
+		if err := bf.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
+			exchangeLogger.Warnf("GetBlock returned blocked block: %s", blk.Cid())
+			return nil, err
+		}
 	}
 
 	return blk, nil
@@ -165,6 +184,9 @@ func (bf *BlockedFetcher) GetBlock(ctx context.Context, c cid.Cid) (blocks.Block
 
 // GetBlocks gets multiple blocks from the fetcher, filtering out blocked ones.
 func (bf *BlockedFetcher) GetBlocks(ctx context.Context, ks []cid.Cid) (<-chan blocks.Block, error) {
+	if bf.blocker == nil {
+		return bf.Fetcher.GetBlocks(ctx, ks)
+	}
 	// Filter the input CIDs
 	var filtered []cid.Cid
 	for _, c := range ks {
@@ -199,9 +221,11 @@ func (bf *BlockedFetcher) GetBlocks(ctx context.Context, ks []cid.Cid) (<-chan b
 					return
 				}
 				// Check if the returned block is blocked
-				if err := bf.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
-					exchangeLogger.Debugf("GetBlocks filtered blocked block from response: %s", blk.Cid())
-					continue
+				if bf.blocker != nil {
+					if err := bf.blocker.IsCidBlocked(blk.Cid()).ToError(); err != nil {
+						exchangeLogger.Debugf("GetBlocks filtered blocked block from response: %s", blk.Cid())
+						continue
+					}
 				}
 				select {
 				case out <- blk:

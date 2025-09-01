@@ -22,9 +22,8 @@ type BlockService struct {
 }
 
 // WrapBlockService wraps the given BlockService with a content-blocking layer
-// for Get and Add operations.
+// for Get and Add operations. This is the fx.Decorate compatible version.
 func WrapBlockService(bs blockservice.BlockService, blocker *nopfs.Blocker) blockservice.BlockService {
-	logger.Debug("BlockService wrapped with content blocker")
 
 	wrapped := &BlockService{
 		blocker: blocker,
@@ -45,13 +44,14 @@ func WrapBlockService(bs blockservice.BlockService, blocker *nopfs.Blocker) bloc
 			blocker:   blocker,
 		}
 	}
-
 	return wrapped
 }
 
 // Closes the BlockService and the Blocker.
 func (nbs *BlockService) Close() error {
-	nbs.blocker.Close()
+	if nbs.blocker != nil {
+		nbs.blocker.Close()
+	}
 	return nbs.bs.Close()
 }
 
@@ -81,15 +81,20 @@ func (nbs *BlockService) Exchange() exchange.Interface {
 
 // AddBlock adds a block unless the CID is blocked.
 func (nbs *BlockService) AddBlock(ctx context.Context, o blocks.Block) error {
-	if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
-		logger.Warn(err.Response)
-		return err
+	if nbs.blocker != nil {
+		if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {
+			logger.Warn(err.Response)
+			return err
+		}
 	}
 	return nbs.bs.AddBlock(ctx, o)
 }
 
 // AddBlocks adds multiple blocks. Blocks with blocked CIDs are dropped.
 func (nbs *BlockService) AddBlocks(ctx context.Context, bs []blocks.Block) error {
+	if nbs.blocker == nil {
+		return nbs.bs.AddBlocks(ctx, bs)
+	}
 	var filtered []blocks.Block
 	for _, o := range bs {
 		if err := nbs.blocker.IsCidBlocked(o.Cid()).ToError(); err != nil {

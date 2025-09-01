@@ -22,8 +22,11 @@ type BlockedBlockstore struct {
 
 // Get returns a block only if it's not blocked.
 func (bs *BlockedBlockstore) Get(ctx context.Context, c cid.Cid) (blocks.Block, error) {
+	if bs.blocker == nil {
+		return bs.Blockstore.Get(ctx, c)
+	}
 	if err := bs.blocker.IsCidBlocked(c).ToError(); err != nil {
-		blockstoreLogger.Warnf("Get blocked block: %s", c)
+		blockstoreLogger.Debugf("Get blocked block: %s", c)
 		return nil, err
 	}
 	return bs.Blockstore.Get(ctx, c)
@@ -31,6 +34,9 @@ func (bs *BlockedBlockstore) Get(ctx context.Context, c cid.Cid) (blocks.Block, 
 
 // GetSize returns the size of a block only if it's not blocked.
 func (bs *BlockedBlockstore) GetSize(ctx context.Context, c cid.Cid) (int, error) {
+	if bs.blocker == nil {
+		return bs.Blockstore.GetSize(ctx, c)
+	}
 	if err := bs.blocker.IsCidBlocked(c).ToError(); err != nil {
 		blockstoreLogger.Warnf("GetSize blocked block: %s", c)
 		return 0, err
@@ -41,6 +47,9 @@ func (bs *BlockedBlockstore) GetSize(ctx context.Context, c cid.Cid) (int, error
 // Has returns whether a block exists only if it's not blocked.
 // If a block is blocked, it returns false (as if it doesn't exist).
 func (bs *BlockedBlockstore) Has(ctx context.Context, c cid.Cid) (bool, error) {
+	if bs.blocker == nil {
+		return bs.Blockstore.Has(ctx, c)
+	}
 	if err := bs.blocker.IsCidBlocked(c).ToError(); err != nil {
 		blockstoreLogger.Debugf("Has blocked block: %s", c)
 		// Return false for blocked content, as if it doesn't exist
@@ -51,6 +60,9 @@ func (bs *BlockedBlockstore) Has(ctx context.Context, c cid.Cid) (bool, error) {
 
 // Put adds a block to the blockstore if it's not blocked.
 func (bs *BlockedBlockstore) Put(ctx context.Context, b blocks.Block) error {
+	if bs.blocker == nil {
+		return bs.Blockstore.Put(ctx, b)
+	}
 	if err := bs.blocker.IsCidBlocked(b.Cid()).ToError(); err != nil {
 		blockstoreLogger.Warnf("Put blocked block: %s", b.Cid())
 		return err
@@ -60,6 +72,9 @@ func (bs *BlockedBlockstore) Put(ctx context.Context, b blocks.Block) error {
 
 // PutMany adds multiple blocks to the blockstore, filtering out blocked ones.
 func (bs *BlockedBlockstore) PutMany(ctx context.Context, blks []blocks.Block) error {
+	if bs.blocker == nil {
+		return bs.Blockstore.PutMany(ctx, blks)
+	}
 	var filtered []blocks.Block
 	for _, b := range blks {
 		if err := bs.blocker.IsCidBlocked(b.Cid()).ToError(); err != nil {
@@ -86,6 +101,10 @@ func (bs *BlockedBlockstore) AllKeysChan(ctx context.Context) (<-chan cid.Cid, e
 	in, err := bs.Blockstore.AllKeysChan(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	if bs.blocker == nil {
+		return in, nil
 	}
 
 	out := make(chan cid.Cid)
