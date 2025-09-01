@@ -1,5 +1,10 @@
 # nopfs-kubo-plugin
 
+> [!WARNING]
+> This plugin is deprecated. Content blocking (nopfs) is now built into Kubo v0.24.0 and later.
+> - See the built-in plugin at https://github.com/ipfs/kubo/tree/master/plugin/plugins/nopfs
+> - See the documentation at https://github.com/ipfs/kubo/blob/master/docs/content-blocking.md
+
 ## Installation
 
   1. Copy the binary `nopfs-kubo-plugin` to `~/.ipfs/plugins`.

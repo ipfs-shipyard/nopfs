@@ -1,7 +1,12 @@
-name: Kubo plugin
+# This workflow builds the legacy nopfs-kubo-plugin which is now deprecated.
+# Content blocking (nopfs) is built into Kubo v0.24.0 and later.
+# - See the built-in plugin at https://github.com/ipfs/kubo/tree/master/plugin/plugins/nopfs
+# - See the documentation at https://github.com/ipfs/kubo/blob/master/docs/content-blocking.md
+
+name: Legacy Kubo plugin
 
 on:
-  push:
+  workflow_dispatch:  # Manual trigger only - plugin is deprecated
 
 
 env:
